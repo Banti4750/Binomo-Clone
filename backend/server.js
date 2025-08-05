@@ -1,16 +1,21 @@
 import express from 'express';
-import connectDB from './db.js';
 import dotenv from 'dotenv';
+import authRoutes from './src/controllers/authControlre.js';
 dotenv.config();
+import('./src/config/db.js')
 
 const PORT = process.env.PORT;
 const app = express();
 
-connectDB();
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('Hello, World!');
 });
+
+// Use auth routes
+app.use('/api/auth', authRoutes);
+
 app.listen(PORT, () => {
     console.log(`✅ Server is running on http://localhost:${PORT}`);
 });

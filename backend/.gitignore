@@ -25,9 +25,11 @@ coverage/
 .env
 .env.*.local
 
+
 # Build directories
 dist/
 build/
+docs.txt
 
 # Optional npm cache directory
 .npm
@@ -37,6 +39,7 @@ build/
 .next/
 out/
 
+
 # Webpack cache
 .cache/
 webpack-cache/
@@ -44,6 +47,7 @@ webpack-cache/
 # IDE settings
 .vscode/
 .idea/
+
 
 # OS files
 .DS_Store
