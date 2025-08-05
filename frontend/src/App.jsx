@@ -1,5 +1,6 @@
 import './App.css'
 import Binomomakes from './components/Binomomakes'
+import ChartComponent from './components/ChartComponent'
 import HeroSection from './components/HeroSection'
 import Peopleworldwide from './components/Peopleworldwide'
 
@@ -9,6 +10,7 @@ function App() {
       <HeroSection />
       <Binomomakes />
       <Peopleworldwide />
+      <ChartComponent />
     </>
   )
 }
