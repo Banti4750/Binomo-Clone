@@ -21,6 +21,7 @@ const register = async (req, res) => {
         let referralBonus = 0;
         let referrerId = null;
 
+
         // If referral code is present
         if (referralCode) {
             const [referrerResult] = await db.query('SELECT id FROM users WHERE referral_code = ?', [referralCode]);
@@ -39,11 +40,13 @@ const register = async (req, res) => {
 
         // Create a unique referral code (example: first 3 of email + timestamp)
         const newReferralCode = email.slice(0, 3).toUpperCase() + Date.now().toString().slice(-4);
+        const somerandomNumber = Math.floor(Math.random() * 1000); // Random number for uniqueness
+
 
         // Insert new user
         const [insertResult] = await db.query(
             'INSERT INTO users (email, password, username, balance, referral_code, referrer_id) VALUES (?, ?, ?, ?, ?, ?)',
-            [email, hashedPassword, email.slice(0, 8), 10000 + referralBonus, newReferralCode, referrerId]
+            [email, hashedPassword, email.slice(0, 5) + somerandomNumber, 10000 + referralBonus, newReferralCode, referrerId]
         );
 
         const newUserId = insertResult.insertId;
@@ -54,6 +57,11 @@ const register = async (req, res) => {
                 'INSERT INTO referrals (referrer_id, referred_id, referral_code_used, bonus_given) VALUES (?, ?, ?, ?)',
                 [referrerId, newUserId, referralCode, referralBonus]
             );
+
+            //give 100 also to user whose refferral code is used
+            await db.query(
+                'UPDATE users SET balance = balance + ? WHERE id = ?',
+                [referralBonus, referrerId])
         }
 
         res.status(201).json({ message: 'User registered successfully' });
