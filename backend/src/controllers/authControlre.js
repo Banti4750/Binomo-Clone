@@ -121,10 +121,39 @@ const login = async (req, res) => {
     }
 }
 
+// TODO:add middleware to protect routes
+const changeUsername = async (req, res) => {
+    try {
+        const { newUsername } = req.body;
+        // const userId = req.user.id; // Assuming user ID is stored in req.user
+        const userId = 5; // For testing purposes, you can replace this with req.user.id
+
+        if (!newUsername) {
+            return res.status(400).json({ message: 'New username is required' });
+        }
+
+        // Check if username already exists
+        const [existingUser] = await db.query('SELECT * FROM users WHERE username = ?', [newUsername]);
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: 'Username already exists' });
+        }
+
+        // Update username
+        await db.query('UPDATE users SET username = ? WHERE id = ?', [newUsername, userId]);
+
+        res.status(200).json({ message: 'Username updated successfully' });
+    } catch (error) {
+        console.error('Change username error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+
 
 
 // all routes related to auth
 router.post('/register', register);
 router.post('/login', login);
+router.post('/change-username', changeUsername);
 
 export default router;
