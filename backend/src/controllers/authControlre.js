@@ -220,7 +220,7 @@ const sendOtp = async (req, res) => {
         );
 
         // Send email without blocking response
-        sendOtpToEmail(otp, email).catch(err => console.error('OTP Email Failed:', err));
+        sendOtpToEmail(otp, email, user.name).catch(err => console.error('OTP Email Failed:', err));
 
         res.status(200).json({ message: 'OTP sent successfully', otp: otp });
     } catch (error) {
@@ -277,8 +277,6 @@ const verifyOtp = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 }
-
-
 
 
 // all routes related to auth
