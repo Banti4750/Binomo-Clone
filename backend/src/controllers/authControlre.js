@@ -148,6 +148,7 @@ const changeUsername = async (req, res) => {
     }
 }
 
+// TODO:add middleware to protect routes
 const updateProfile = async (req, res) => {
     try {
         const { profilePicUrl, gender, dob, name } = req.body;
