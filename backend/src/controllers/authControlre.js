@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { Router } from "express";
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import sendOtpToEmail from '../../utils/sentEmail.js';
 const router = Router();
 dotenv.config();
 
@@ -187,6 +188,96 @@ const updateProfile = async (req, res) => {
     }
 }
 
+//send otp to email for forgot password
+const sendOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Check if user exists
+        const [user] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (user.length === 0) {
+            return res.status(400).json({ message: 'User does not exist' });
+        }
+
+        //rate limit check
+        const [rateLimitCheck] = await db.query('SELECT * FROM otp WHERE email = ? AND created_at > NOW() - INTERVAL 5 MINUTE', [email]);
+
+        if (rateLimitCheck.length >= process.env.OTP_LIMIT) {
+            return res.status(429).json({ message: 'Too many requests. Please try again later.' });
+        }
+
+        // Generate OTP and send to email (implementation not shown)
+        const otp = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit OTP
+
+        // Save to DB
+        await db.query(
+            'INSERT INTO otp (email, otp_value, source, created_at) VALUES (?, ?, ?, NOW())',
+            [email, otp, 'forgot-password']
+        );
+
+        // Send email without blocking response
+        sendOtpToEmail(otp, email).catch(err => console.error('OTP Email Failed:', err));
+
+        res.status(200).json({ message: 'OTP sent successfully', otp: otp });
+    } catch (error) {
+        console.error('Send OTP error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+//verify otp for forgot password
+const verifyOtp = async (req, res) => {
+    try {
+        const { email, otp, newPassword, confirmNewPassword } = req.body;
+
+        if (!email || !otp || !newPassword || !confirmNewPassword) {
+            return res.status(400).json({ message: 'Email, OTP, and passwords are required' });
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({ message: 'Passwords do not match' });
+        }
+
+        // Check if OTP exists and is valid
+        const [otpRecord] = await db.query(
+            `SELECT * FROM otp
+             WHERE is_used = ?
+               AND email = ?
+               AND otp_value = ?
+               AND created_at > NOW() - INTERVAL ? MINUTE`,
+            [0, email, otp, process.env.OTP_VALID_TIME]
+        );
+
+        if (!otpRecord || otpRecord.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update user's password
+        await db.query(
+            'UPDATE users SET password = ? WHERE email = ?',
+            [hashedPassword, email]
+        );
+
+        // Mark OTP as used
+        await db.query(
+            'UPDATE otp SET is_used = ? WHERE email = ? AND otp_value = ?',
+            [1, email, otp]
+        );
+
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('Verify OTP error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
 
 
 
@@ -195,5 +286,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/change-username', changeUsername);
 router.post('/update-profile', updateProfile);
+router.post('/send-otp-forgot-password', sendOtp);
+router.post('/verify-otp-forgot-password', verifyOtp);
 
 export default router;
