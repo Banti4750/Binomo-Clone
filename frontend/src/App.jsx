@@ -10,7 +10,8 @@ function App() {
       <HeroSection />
       <Binomomakes />
       <Peopleworldwide />
-      <ChartComponent />
+      {/* for chart testing}
+      {/* <ChartComponent /> */}
     </>
   )
 }
