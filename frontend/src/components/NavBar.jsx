@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import Button from './Button'
+import AuthPage from './AuthPage';
 
 const NavBar = () => {
+    const [authModal, setAuthModal] = useState(false);
     return (
         <>
             <nav className="bg-black/60 bg-opacity-90 p-1  fixed w-full top-0 z-50 border-b border-gray-800">
@@ -49,12 +52,19 @@ const NavBar = () => {
                         {/* Desktop Auth Buttons */}
                         <div className="hidden md:flex items-center space-x-3">
                             <Button text="Log In" variant="ghost" />
-                            <Button text="Register" variant="primary" />
+                            <Button text="Register" variant="primary" onClick={() => setAuthModal(true)} />
                         </div>
+
+
                     </div>
                 </div>
 
+
             </nav >
+
+            {authModal === true &&
+                <AuthPage />
+            }
         </>
     )
 }

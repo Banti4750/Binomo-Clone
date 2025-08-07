@@ -2,7 +2,7 @@ import React from 'react'
 
 const Peopleworldwide = () => {
     return (
-        <div className="bg-gradient-to-tr from-black via-blue-950 to-black h-[600px] p-8 md:p-12 relative overflow-hidden mx-auto mb-8 flex justify-center items-center">
+        <div className="bg-gradient-to-tr from-black via-blue-950 to-black h-[600px] p-8 md:p-12 relative overflow-hidden mx-auto  flex justify-center items-center">
             <div className="w-full max-w-6xl">
                 <h1 className='text-5xl font-bold text-white text-center mb-12'>
                     People worldwide earn with Binomo
