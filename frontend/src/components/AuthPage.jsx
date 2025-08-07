@@ -36,7 +36,7 @@ const AuthPage = () => {
     return (
         <>
             {/* navbar */}
-            <div className='flex bg-black justify-between items-center p-2 '>
+            <div className='flex bg-black w-full fixed justify-between items-center p-2 '>
 
                 <div className="flex items-center space-x-2 cursor-pointer " onClick={() => navigate('/')}>
                     <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center transform rotate-12">
@@ -64,7 +64,7 @@ const AuthPage = () => {
                             <div className="flex bg-gray-700/50 rounded-lg p-1 mb-6">
                                 <button
                                     onClick={() => handleAuthModeChange('login')}
-                                    className={`flex-1 py-3 px-4 rounded-md text-sm font-semibold transition-all duration-300 ${authMode === 'login'
+                                    className={`flex-1 cursor-pointer py-3 px-4 rounded-md text-sm font-semibold transition-all duration-300 ${authMode === 'login'
                                         ? 'bg-yellow-400 text-gray-900 shadow-lg'
                                         : 'text-gray-300 hover:text-white hover:bg-gray-600/30'
                                         }`}
@@ -73,7 +73,7 @@ const AuthPage = () => {
                                 </button>
                                 <button
                                     onClick={() => handleAuthModeChange('register')}
-                                    className={`flex-1 py-3 px-4 rounded-md text-sm font-semibold transition-all duration-300 ${authMode === 'register'
+                                    className={`flex-1 py-3 cursor-pointer px-4 rounded-md text-sm font-semibold transition-all duration-300 ${authMode === 'register'
                                         ? 'bg-yellow-400 text-gray-900 shadow-lg'
                                         : 'text-gray-300 hover:text-white hover:bg-gray-600/30'
                                         }`}
@@ -88,7 +88,7 @@ const AuthPage = () => {
                             <div className="mb-6">
                                 <button
                                     onClick={() => handleAuthModeChange('login')}
-                                    className="flex items-center text-yellow-400 hover:text-yellow-300 transition-colors duration-200 font-medium"
+                                    className="flex cursor-pointer items-center text-yellow-400 hover:text-yellow-300 transition-colors duration-200 font-medium"
                                 >
                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -169,7 +169,7 @@ const AuthPage = () => {
                                 <div className="text-right">
                                     <button
                                         onClick={() => handleAuthModeChange('forgot')}
-                                        className="text-sm text-yellow-400 hover:text-yellow-300 transition-colors duration-200 font-medium"
+                                        className="text-sm cursor-pointer text-yellow-400 hover:text-yellow-300 transition-colors duration-200 font-medium"
                                     >
                                         Forgot password?
                                     </button>
@@ -179,7 +179,7 @@ const AuthPage = () => {
                             {/* Submit Button */}
                             <button
                                 onClick={handleSubmit}
-                                className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-4 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-gray-800 shadow-lg text-lg"
+                                className="w-full bg-gradient-to-r cursor-pointer from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-4 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-gray-800 shadow-lg text-lg"
                             >
                                 {authMode === 'login' ? 'Start Trading' :
                                     authMode === 'register' ? 'Create Account' :
@@ -188,13 +188,13 @@ const AuthPage = () => {
                         </div>
 
                         {/* Additional Register Info */}
-                        {authMode === 'register' && (
+                        {/* {authMode === 'register' && (
                             <div className="mt-6 p-4 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
                                 <p className="text-yellow-300 text-sm text-center">
                                     🎉 Get up to 100% bonus on your first deposit!
                                 </p>
                             </div>
-                        )}
+                        )} */}
 
                         {/* Divider - Hide for forgot password */}
                         {authMode !== 'forgot' && (
@@ -212,7 +212,7 @@ const AuthPage = () => {
                                     {authMode === 'login' ? "New to Binomo?" : "Already have an account?"}
                                     <button
                                         onClick={() => handleAuthModeChange(authMode === 'login' ? 'register' : 'login')}
-                                        className="ml-2 text-yellow-400 hover:text-yellow-300 font-semibold transition-colors duration-200"
+                                        className="ml-2 text-yellow-400 cursor-pointer hover:text-yellow-300 font-semibold transition-colors duration-200"
                                     >
                                         {authMode === 'login' ? 'Create Account' : 'Sign In'}
                                     </button>
@@ -224,17 +224,17 @@ const AuthPage = () => {
                         {authMode === 'forgot' && (
                             <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                                 <p className="text-green-300 text-sm text-center">
-                                    If an account with that email exists, we'll send you a password reset link.
+                                    If an account with that email exists, we'll send you a otp to your email.
                                 </p>
                             </div>
                         )}
                     </div>
 
                     {/* Footer */}
-                    <div className="text-center mt-8 text-gray-400 text-sm">
+                    {/* <div className="text-center mt-8 text-gray-400 text-sm">
                         <p>By continuing, you agree to Binomo's <span className="text-yellow-400 hover:text-yellow-300 cursor-pointer">Terms of Service</span> and <span className="text-yellow-400 hover:text-yellow-300 cursor-pointer">Privacy Policy</span></p>
                         <p className="mt-2 text-xs">Risk Warning: Trading involves risk. Only invest what you can afford to lose.</p>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </>
