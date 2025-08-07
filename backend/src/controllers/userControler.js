@@ -1,16 +1,15 @@
 import db from '../config/db.js';
 import { Router } from "express";
 import dotenv from 'dotenv';
+import verifyToken from '../middleware/auth.js';
 const router = Router();
 dotenv.config();
 
 
-// TODO:add middleware to protect routes
 const changeUsername = async (req, res) => {
     try {
         const { newUsername } = req.body;
-        // const userId = req.user.id; // Assuming user ID is stored in req.user
-        const userId = 5; // For testing purposes, you can replace this with req.user.id
+        const userId = req.user.id; // Assuming user ID is stored in req.user
 
         if (!newUsername) {
             return res.status(400).json({ message: 'New username is required' });
@@ -32,12 +31,10 @@ const changeUsername = async (req, res) => {
     }
 }
 
-// TODO:add middleware to protect routes
 const updateProfile = async (req, res) => {
     try {
         const { profilePicUrl, gender, dob, name } = req.body;
-        // const userId = req.user.id; // Assuming user ID is stored in req.user
-        const userId = 5; // For testing purposes, you can replace this with req.user.id
+        const userId = req.user.id; // Assuming user ID is stored in req.user
 
         let updatedata = [];
         let updateValues = [];
@@ -71,11 +68,9 @@ const updateProfile = async (req, res) => {
     }
 }
 
-// TODO:add middleware to protect routes
 const getUserProfile = async (req, res) => {
     try {
-        // const userId = req.user.id; // Assuming user ID is stored in req.user
-        const userId = 5; // For testing purposes, you can replace this with req.user.id
+        const userId = req.user.id; // Assuming user ID is stored in req.user
 
         // Fetch user profile
         const [user] = await db.query('SELECT id , email , username , balance , referral_code , referrer_id , is_verified , profile_pic_url , gender , dob , name  FROM users WHERE id = ?', [userId]);
@@ -91,8 +86,8 @@ const getUserProfile = async (req, res) => {
 }
 
 // all routes related to user profile
-router.post('/change-username', changeUsername);
-router.post('/update-profile', updateProfile);
-router.get('/profile', getUserProfile);
+router.post('/change-username', verifyToken, changeUsername);
+router.post('/update-profile', verifyToken, updateProfile);
+router.get('/profile', verifyToken, getUserProfile);
 
 export default router;
