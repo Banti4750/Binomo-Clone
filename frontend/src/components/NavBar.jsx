@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useReducer, useState } from 'react'
 import Button from './Button'
 import AuthPage from './AuthPage';
+import { useNavigate } from 'react-router-dom';
 
 const NavBar = () => {
-    const [authModal, setAuthModal] = useState(false);
+    const navigate = useNavigate();
     return (
         <>
             <nav className="bg-black/60 bg-opacity-90 p-1  fixed w-full top-0 z-50 border-b border-gray-800">
@@ -12,7 +13,7 @@ const NavBar = () => {
 
                         {/* Logo Section */}
                         <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex cursor-pointer items-center space-x-2">
                                 <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center transform rotate-12">
                                     <span className="text-black font-bold text-lg">⚡</span>
                                 </div>
@@ -51,20 +52,13 @@ const NavBar = () => {
 
                         {/* Desktop Auth Buttons */}
                         <div className="hidden md:flex items-center space-x-3">
-                            <Button text="Log In" variant="ghost" />
-                            <Button text="Register" variant="primary" onClick={() => setAuthModal(true)} />
+                            <Button text="Log In" variant="ghost" onClick={() => navigate('/auth')} />
+                            <Button text="Register" variant="primary" onClick={() => navigate('/auth')} />
                         </div>
-
 
                     </div>
                 </div>
-
-
             </nav >
-
-            {authModal === true &&
-                <AuthPage />
-            }
         </>
     )
 }

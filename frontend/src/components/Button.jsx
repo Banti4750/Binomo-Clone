@@ -1,7 +1,7 @@
 import React from 'react'
 
 const Button = ({ text, variant = "primary", onClick, className = "" }) => {
-    const baseClasses = "font-semibold px-6 py-2 rounded-lg text-sm transition-all duration-300 transform hover:scale-105";
+    const baseClasses = " cursor-pointer font-semibold px-6 py-2 rounded-lg text-sm transition-all duration-300 transform hover:scale-105";
 
     const variants = {
         primary: "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-black shadow-lg hover:shadow-xl",

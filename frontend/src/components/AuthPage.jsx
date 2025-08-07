@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail, Gift } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AuthPage = () => {
+    const navigate = useNavigate();
     const [authMode, setAuthMode] = useState('login'); // 'login', 'register', 'forgot'
     const [formData, setFormData] = useState({
         email: '',
@@ -36,7 +38,7 @@ const AuthPage = () => {
             {/* navbar */}
             <div className='flex bg-black justify-between items-center p-2 '>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 cursor-pointer " onClick={() => navigate('/')}>
                     <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center transform rotate-12">
                         <span className="text-black font-bold text-lg">⚡</span>
                     </div>

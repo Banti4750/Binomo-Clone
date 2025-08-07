@@ -1,9 +1,18 @@
+
 import './App.css'
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import Auth from './pages/Auth';
+import LandingPage from './pages/LandingPage';
 
-function App() {
+const App = () => {
   return (
-    <div>hi</div>
-  )
-}
+    <BrowserRouter>
+      <Routes>
+        <Route path='/auth' element={<Auth />} />
+        <Route path='/' element={<LandingPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
-export default App
+export default App;
