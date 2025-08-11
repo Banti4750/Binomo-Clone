@@ -1,6 +1,8 @@
 import db from '../config/db.js';
 import { Router } from "express";
 import dotenv from 'dotenv';
+import validateUserBalance from '../../utils/tradeHelper/validateUserBalance.js';
+import updateUserBalance from '../../utils/tradeHelper/updateUserBalance.js';
 
 const router = Router();
 dotenv.config();
@@ -42,36 +44,7 @@ const calculatePayoutPercentage = (duration, assetSymbol) => {
     return Math.round(basePayout + durationBonus + volatilityFactor);
 };
 
-// Validate user balance before trade
-const validateUserBalance = async (userId, amount) => {
-    try {
-        const [user] = await db.query('SELECT balance FROM users WHERE id = ?', [userId]);
-        if (!user.length) return { valid: false, message: 'User not found' };
 
-        if (user[0].balance < amount) {
-            return { valid: false, message: 'Insufficient balance' };
-        }
-
-        return { valid: true, balance: user[0].balance };
-    } catch (error) {
-        return { valid: false, message: 'Database error' };
-    }
-};
-
-// Update user balance
-const updateUserBalance = async (userId, amount, operation = 'subtract') => {
-    try {
-        const query = operation === 'add'
-            ? 'UPDATE users SET balance = balance + ? WHERE id = ?'
-            : 'UPDATE users SET balance = balance - ? WHERE id = ?';
-
-        await db.query(query, [amount, userId]);
-        return true;
-    } catch (error) {
-        console.error('Error updating user balance:', error);
-        return false;
-    }
-};
 
 // TRADING CONTROLLERS
 
