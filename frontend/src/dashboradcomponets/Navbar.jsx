@@ -1,7 +1,15 @@
+import React, { useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import React from 'react'
+import { useUser } from '../context/useGetUser';
 
 const Navbar = () => {
+
+    const { user, fetchUserProfile } = useUser();
+
+    useEffect(() => {
+        fetchUserProfile(); // fetch profile when this component loads
+    }, []);
+
     return (
         <div className='bg-gray-900 p-4 flex justify-between items-center shadow-lg border-b border-gray-700'>
             {/* Left part */}
@@ -37,7 +45,9 @@ const Navbar = () => {
                 {/* Balance */}
                 <div className='text-white'>
                     <span className='text-gray-400 text-sm'>Balance: </span>
-                    <span className='text-xl font-bold text-green-400'>$10,000</span>
+                    <span className="text-xl font-bold text-green-400">
+                        ${user?.balance ?? 0}
+                    </span>
                 </div>
 
                 {/* Deposit button */}
@@ -52,7 +62,7 @@ const Navbar = () => {
 
                 {/* Profile user */}
                 <div className='bg-gray-800 border border-gray-600 w-10 h-10 rounded-full text-white flex items-center justify-center font-bold cursor-pointer hover:bg-gray-700 transition-colors'>
-                    BK
+                    {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                 </div>
             </div>
         </div>
