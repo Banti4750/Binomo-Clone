@@ -8,6 +8,7 @@ import cors from 'cors';
 // Import your existing routes
 import authRoutes from './src/controllers/authControlre.js'; // Fixed filename
 import userRoutes from './src/controllers/userControler.js'; // Fixed filename
+import assetsRoutes from './src/controllers/assetsController.js'; // Fixed filename
 
 // Import new trading functionality
 import tradingRoutes, { setPriceService, startTradeSettlement } from './src/controllers/tradeControler.js'; // Fixed filename
@@ -62,6 +63,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/trading', tradingRoutes);
+app.use('/api/assets', assetsRoutes); // Assuming assets are part of trading
 
 // WebSocket connection handling
 wss.on('connection', (ws, request) => {
