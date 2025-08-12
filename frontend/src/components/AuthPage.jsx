@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Lock, Mail, Gift, Eye, EyeOff } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useNavigate } from 'react-router-dom';
 
 const AuthPage = () => {
+    const navigate = useNavigate();
     const [authMode, setAuthMode] = useState('login'); // 'login', 'register', 'forgot', 'otp', 'reset'
     const [formData, setFormData] = useState({
         email: '',
@@ -18,8 +22,37 @@ const AuthPage = () => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [isOtpComplete, setIsOtpComplete] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [isResetting, setIsResetting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiResponse, setApiResponse] = useState('');
+    const [error, setError] = useState('');
     const inputRefs = useRef([]);
+
+    // API Base URL
+    const API_BASE = 'http://localhost:5000/api/auth';
+
+    // Toast configuration
+    const toastOptions = {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+    };
+
+    // Navigation function to simulate routing
+    const navigateToDashboard = () => {
+        // In a real React app with React Router, you would use:
+        // navigate('/dashboard');
+        // For demo purposes, we'll show a success message
+        toast.success("🎉 Redirecting to dashboard...", toastOptions);
+
+        // Simulate navigation after 2 seconds
+        setTimeout(() => {
+            navigate('/dashboard') // Replace with your actual dashboard route
+        }, 2000);
+    };
 
     useEffect(() => {
         // Focus first OTP input when in OTP mode
@@ -38,30 +71,154 @@ const AuthPage = () => {
         }
     }, [otp]);
 
+
+
+    // API Functions
+    const apiCall = async (endpoint, data, method = 'POST') => {
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'API Error');
+            }
+
+            return result;
+        } catch (err) {
+            throw new Error(err.message || 'Network error');
+        }
+    };
+
+    const handleLogin = async () => {
+        setIsLoading(true);
+        setError('');
+        setApiResponse('');
+        try {
+            const result = await apiCall('/login', {
+                email: formData.email,
+                password: formData.password
+            });
+
+            // Store token and user data
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+
+            // Show success toast
+            toast.success(`🎉 Welcome back, ${result.user.username}!`, toastOptions);
+
+            // Navigate to dashboard
+            navigateToDashboard();
+
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message, toastOptions);
+        }
+        setIsLoading(false);
+    };
+
+    const handleRegister = async () => {
+        setIsLoading(true);
+        setError('');
+        setApiResponse('');
+        try {
+            const result = await apiCall('/register', {
+                email: formData.email,
+                password: formData.password,
+                referralCode: formData.referralCode || undefined
+            });
+
+            toast.success(result.message, toastOptions);
+
+            setTimeout(() => {
+                setAuthMode('login');
+                toast.info("Please login with your new account", toastOptions);
+            }, 2000);
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message, toastOptions);
+        }
+        setIsLoading(false);
+    };
+
+    const handleSendOtp = async () => {
+        setIsLoading(true);
+        setError('');
+        setApiResponse('');
+        try {
+            const result = await apiCall('/send-otp-forgot-password', {
+                email: formData.email
+            });
+
+            toast.success(result.message, toastOptions);
+            // For demo purposes, show the OTP (remove in production)
+            console.log('Demo OTP:', result.otp);
+            setAuthMode('otp');
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message, toastOptions);
+        }
+        setIsLoading(false);
+    };
+
+    const handleVerifyOtpAndReset = async () => {
+        setIsVerifying(true);
+        setError('');
+        setApiResponse('');
+        try {
+            const result = await apiCall('/verify-otp-forgot-password', {
+                email: formData.email,
+                otp: otp.join(''),
+                newPassword: formData.newPassword,
+                confirmNewPassword: formData.confirmPassword
+            });
+
+            toast.success(result.message, toastOptions);
+
+            setTimeout(() => {
+                setAuthMode('login');
+                setFormData({ email: '', password: '', newPassword: '', confirmPassword: '', referralCode: '' });
+                setOtp(['', '', '', '', '', '']);
+                toast.info("Please login with your new password", toastOptions);
+            }, 2000);
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message, toastOptions);
+        }
+        setIsVerifying(false);
+    };
+
     const handleInputChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
+        // Clear error when user starts typing
+        if (error) setError('');
+        if (apiResponse) setApiResponse('');
     };
 
-    const handleSubmit = () => {
-        if (authMode === 'forgot') {
-            console.log('Password reset request for:', formData.email);
-            // Simulate sending OTP
-            setAuthMode('otp');
+    const handleSubmit = async () => {
+        if (authMode === 'login') {
+            await handleLogin();
+        } else if (authMode === 'register') {
+            await handleRegister();
+        } else if (authMode === 'forgot') {
+            await handleSendOtp();
         } else if (authMode === 'reset') {
             if (formData.newPassword !== formData.confirmPassword) {
-                alert('Passwords do not match!');
+                const errorMsg = 'Passwords do not match!';
+                setError(errorMsg);
+                toast.error(errorMsg, toastOptions);
                 return;
             }
-            console.log('Password reset for:', formData.email, 'New password:', formData.newPassword);
-            // Add password reset logic here
-            setAuthMode('login');
-            setFormData({ email: '', password: '', newPassword: '', confirmPassword: '', referralCode: '' });
-            alert('Password reset successfully!');
-        } else {
-            console.log(authMode === 'login' ? 'Login attempt:' : 'Registration attempt:', formData);
+            // This will be handled by OTP verification
         }
     };
 
@@ -70,6 +227,8 @@ const AuthPage = () => {
         setFormData({ email: '', password: '', newPassword: '', confirmPassword: '', referralCode: '' });
         setOtp(['', '', '', '', '', '']);
         setIsOtpComplete(false);
+        setError('');
+        setApiResponse('');
     };
 
     // OTP handling functions
@@ -109,28 +268,38 @@ const AuthPage = () => {
             const digits = pastedData.split('');
             setOtp(digits);
             inputRefs.current[5]?.focus();
+            toast.info("OTP pasted successfully!", toastOptions);
         }
     };
 
     const clearOtp = () => {
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
+        toast.info("OTP cleared", toastOptions);
     };
 
     const handleVerifyOtp = async () => {
         if (isOtpComplete && !isVerifying) {
-            setIsVerifying(true);
-            setTimeout(() => {
-                console.log('OTP verified:', otp.join(''));
-                setIsVerifying(false);
-                setAuthMode('reset');
-            }, 2000);
+            setAuthMode('reset');
+            toast.success("OTP verified! Please set your new password.", toastOptions);
         }
     };
 
-    const handleResendOtp = () => {
-        alert('Resending OTP to ' + formData.email);
-        clearOtp();
+    const handleResendOtp = async () => {
+        setError('');
+        try {
+            const result = await apiCall('/send-otp-forgot-password', {
+                email: formData.email
+            });
+
+            toast.success(`OTP resent to ${formData.email}`, toastOptions);
+            // For demo purposes, show the new OTP
+            console.log('Demo OTP (resent):', result.otp);
+            clearOtp();
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message, toastOptions);
+        }
     };
 
     const getTitle = () => {
@@ -153,6 +322,21 @@ const AuthPage = () => {
 
     return (
         <>
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="dark"
+                toastClassName="bg-gray-800 text-white"
+                progressClassName="bg-yellow-400"
+            />
             {/* Navbar */}
             <div className='flex bg-black w-full fixed top-0 z-50 justify-between items-center p-4'>
                 <div className="flex items-center space-x-2 cursor-pointer">
@@ -196,6 +380,8 @@ const AuthPage = () => {
                             </h2>
                             <p className="text-gray-300 text-lg">{getSubtitle()}</p>
                         </div>
+
+
 
                         {/* Toggle Tabs - Only show for login/register */}
                         {authMode !== 'forgot' && authMode !== 'otp' && authMode !== 'reset' && (
@@ -432,6 +618,25 @@ const AuthPage = () => {
                                                 </button>
                                             </div>
                                         </div>
+
+                                        {/* Reset Password Button */}
+                                        <button
+                                            onClick={handleVerifyOtpAndReset}
+                                            disabled={!formData.newPassword || !formData.confirmPassword || isVerifying}
+                                            className={`w-full py-4 px-4 rounded-lg font-bold text-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-gray-800 shadow-lg ${(!formData.newPassword || !formData.confirmPassword || isVerifying)
+                                                ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 cursor-pointer'
+                                                }`}
+                                        >
+                                            {isVerifying ? (
+                                                <div className="flex items-center justify-center">
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400 mr-2"></div>
+                                                    Resetting Password...
+                                                </div>
+                                            ) : (
+                                                'Reset Password'
+                                            )}
+                                        </button>
                                     </>
                                 )}
 
@@ -475,25 +680,40 @@ const AuthPage = () => {
                                 {/* Submit Button */}
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={isResetting}
-                                    className="w-full bg-gradient-to-r cursor-pointer from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold py-4 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-gray-800 shadow-lg text-lg disabled:opacity-50"
+                                    disabled={isLoading}
+                                    className={`w-full py-4 px-4 rounded-lg font-bold text-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-gray-800 shadow-lg ${isLoading
+                                        ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 cursor-pointer'
+                                        }`}
                                 >
-                                    {authMode === 'login' ? 'Start Trading' :
-                                        authMode === 'register' ? 'Create Account' :
-                                            authMode === 'forgot' ? 'Send Reset Code' :
-                                                'Reset Password'}
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400 mr-2"></div>
+                                            {authMode === 'login' ? 'Signing In...' :
+                                                authMode === 'register' ? 'Creating Account...' :
+                                                    authMode === 'forgot' ? 'Sending Code...' :
+                                                        'Processing...'}
+                                        </div>
+                                    ) : (
+                                        authMode === 'login' ? 'Start Trading' :
+                                            authMode === 'register' ? 'Create Account' :
+                                                authMode === 'forgot' ? 'Send Reset Code' :
+                                                    'Reset Password'
+                                    )}
                                 </button>
                             </div>
                         )}
 
                         {/* Success message for forgot password */}
-                        {authMode === 'forgot' && (
+                        {authMode === 'forgot' && !error && !apiResponse && (
                             <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                                 <p className="text-green-300 text-sm text-center">
                                     Enter your email address and we'll send you a verification code to reset your password.
                                 </p>
                             </div>
                         )}
+
+
 
                         {/* Divider - Hide for forgot password and OTP */}
                         {authMode !== 'forgot' && authMode !== 'otp' && authMode !== 'reset' && (
