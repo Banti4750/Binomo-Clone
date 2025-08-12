@@ -1,3 +1,5 @@
+import db from '../../src/config/db.js';
+
 // Validate user balance before trade
 const validateUserBalance = async (userId, amount) => {
     try {
@@ -13,6 +15,5 @@ const validateUserBalance = async (userId, amount) => {
         return { valid: false, message: 'Database error' };
     }
 };
-
 
 export default validateUserBalance;

@@ -2,6 +2,8 @@
 import db from '../config/db.js';
 import { Router } from "express";
 import dotenv from 'dotenv';
+import validateUserBalance from '../../utils/tradeHelper/validateUserBalance.js';
+import updateUserBalance from '../../utils/tradeHelper/updateUserBalance.js';
 
 const router = Router();
 dotenv.config();
@@ -14,36 +16,6 @@ const setPriceService = (service) => {
     priceService = service;
 };
 
-// Validate user balance before trade
-const validateUserBalance = async (userId, amount) => {
-    try {
-        const [user] = await db.query('SELECT balance FROM users WHERE id = ?', [userId]);
-        if (!user.length) return { valid: false, message: 'User not found' };
-
-        if (user[0].balance < amount) {
-            return { valid: false, message: 'Insufficient balance' };
-        }
-
-        return { valid: true, balance: user[0].balance };
-    } catch (error) {
-        return { valid: false, message: 'Database error' };
-    }
-};
-
-// Update user balance
-const updateUserBalance = async (userId, amount, operation = 'subtract') => {
-    try {
-        const query = operation === 'add'
-            ? 'UPDATE users SET balance = balance + ? WHERE id = ?'
-            : 'UPDATE users SET balance = balance - ? WHERE id = ?';
-
-        await db.query(query, [amount, userId]);
-        return true;
-    } catch (error) {
-        console.error('Error updating user balance:', error);
-        return false;
-    }
-};
 
 // Get current price from price service
 const getCurrentPrice = (assetSymbol) => {
@@ -221,7 +193,7 @@ const closeExpiredTrades = async () => {
                 profitLoss = payout;
 
                 // Add winnings to user balance (stake + profit)
-                await updateUserBalance(trade.user_id, trade.stake_amount + payout, 'add');
+                await updateUserBalance(trade.user_id, parseInt(trade.stake_amount) + parseInt(profitLoss), 'add');
             }
 
             // Update trade record
@@ -312,49 +284,6 @@ const getUserTradingStats = async (req, res) => {
     }
 };
 
-// Cancel an open trade (if allowed within first 30 seconds)
-const cancelTrade = async (req, res) => {
-    try {
-        const { tradeId } = req.params;
-        const { userId } = req.body;
-
-        const [trades] = await db.query(`
-            SELECT * FROM trades
-            WHERE id = ? AND user_id = ? AND status = 'OPEN'
-        `, [tradeId, userId]);
-
-        if (!trades.length) {
-            return res.status(404).json({ message: 'Trade not found or already closed' });
-        }
-
-        const trade = trades[0];
-        const now = new Date();
-        const tradeStart = new Date(trade.start_time);
-        const timeDiff = (now - tradeStart) / 1000; // in seconds
-
-        // Allow cancellation only within 30 seconds
-        if (timeDiff > 30) {
-            return res.status(400).json({
-                message: 'Trade can only be cancelled within 30 seconds of creation',
-                timeElapsed: Math.round(timeDiff)
-            });
-        }
-
-        // Refund stake amount to user
-        await updateUserBalance(userId, trade.stake_amount, 'add');
-
-        // Delete the trade
-        await db.query('DELETE FROM trades WHERE id = ?', [tradeId]);
-
-        res.status(200).json({
-            message: 'Trade cancelled successfully',
-            refundAmount: trade.stake_amount
-        });
-    } catch (error) {
-        console.error('Error cancelling trade:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
 
 // Get user balance
 const getUserBalance = async (req, res) => {
@@ -396,13 +325,12 @@ const stopTradeSettlement = () => {
 };
 
 // ROUTES - Fixed the problematic route
-router.get('/trades/user/:userId', getUserTrades);
-router.get('/trades/stats/:userId', getUserTradingStats);
+router.get('/trades/user/:userId', getUserTrades);//✅
+router.get('/trades/stats/:userId', getUserTradingStats);//✅
 router.get('/trades/:tradeId', getTradeById);
-router.get('/balance/:userId', getUserBalance);
-router.get('/assets/prices', getAssetPrices);
-router.post('/trades', createTrade);
-router.post('/trades/:tradeId/cancel', cancelTrade); // Changed from DELETE to POST to fix the path-to-regexp issue
+router.get('/balance/:userId', getUserBalance);//✅
+router.get('/assets/prices', getAssetPrices);//✅
+router.post('/trades', createTrade);//✅
 
 // Export everything needed
 export default router;

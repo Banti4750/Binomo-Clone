@@ -1,5 +1,8 @@
+import db from '../../src/config/db.js';
+
 // Update user balance
 const updateUserBalance = async (userId, amount, operation = 'subtract') => {
+    console.error('Updating user balance:', { userId, amount, operation });
     try {
         const query = operation === 'add'
             ? 'UPDATE users SET balance = balance + ? WHERE id = ?'
@@ -12,6 +15,5 @@ const updateUserBalance = async (userId, amount, operation = 'subtract') => {
         return false;
     }
 };
-
 
 export default updateUserBalance;
