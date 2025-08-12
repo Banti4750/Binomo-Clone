@@ -5,7 +5,6 @@ import Peopleworldwide from '../components/Peopleworldwide'
 import Joinsuccessfultraders from '../components/Joinsuccessfultraders'
 import Deposit from '../components/Deposit'
 import Footer from '../components/Footer'
-import OTPComponent from '../components/OTPComponent'
 
 const LandingPage = () => {
     return (
