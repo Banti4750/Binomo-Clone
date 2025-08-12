@@ -108,7 +108,6 @@ const AuthPage = () => {
 
             // Store token and user data
             localStorage.setItem('token', result.token);
-            localStorage.setItem('user', JSON.stringify(result.user));
 
             // Show success toast
             toast.success(`🎉 Welcome back, ${result.user.username}!`, toastOptions);
