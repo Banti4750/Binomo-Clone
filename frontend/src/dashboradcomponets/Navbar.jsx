@@ -1,17 +1,24 @@
-import React, { useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Plus, X } from 'lucide-react'
 import { useUser } from '../context/useGetUser';
+import AssetsCard from './AssetsCard';
+import { useAssets } from '../context/useGetAssets';
 
 const Navbar = () => {
-
     const { user, fetchUserProfile } = useUser();
+    const [openAssetsModal, setOpenAssetsModal] = useState(false);
+    const { activeAsset } = useAssets();
 
     useEffect(() => {
         fetchUserProfile(); // fetch profile when this component loads
     }, []);
 
+    const toggleAssetsModal = () => {
+        setOpenAssetsModal(!openAssetsModal);
+    };
+
     return (
-        <div className='bg-gray-900 p-4 flex justify-between items-center shadow-lg border-b border-gray-700'>
+        <div className='relative bg-gray-900 p-4 flex justify-between items-center shadow-lg border-b border-gray-700'>
             {/* Left part */}
             <div className='flex items-center gap-4'>
                 {/* Logo */}
@@ -24,18 +31,21 @@ const Navbar = () => {
                     </span>
                 </div>
 
-                {/* Add trading modal */}
-                <button className='bg-gray-800 hover:bg-gray-700 p-2 rounded-xl text-white border border-gray-600 transition-colors'>
-                    <Plus size={20} />
+                {/* Add trading modal toggle button */}
+                <button
+                    className='bg-gray-800 hover:bg-gray-700 p-2 rounded-xl text-white border border-gray-600 transition-colors relative z-50'
+                    onClick={toggleAssetsModal}
+                >
+                    {openAssetsModal ? <X size={20} /> : <Plus size={20} />}
                 </button>
 
                 {/* Active trade */}
                 <div className='bg-gray-800 px-3 py-2 rounded-xl text-white border border-gray-600'>
                     <div className='flex items-center gap-3'>
                         {/* Symbol */}
-                        <span className='font-semibold text-yellow-400'>BTC</span>
+                        <span className='font-semibold text-yellow-400'>{activeAsset?.symbol || "BTC"}</span>
                         {/* Percentage profit */}
-                        <span className='text-green-400 font-medium'>+82%</span>
+                        <span className='text-green-400 font-medium'>{activeAsset?.payout_percentage || "0"}%</span>
                     </div>
                 </div>
             </div>
@@ -65,6 +75,22 @@ const Navbar = () => {
                     {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
                 </div>
             </div>
+
+            {/* Assets Modal - positioned absolutely */}
+            {openAssetsModal && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-transparent bg-opacity-50 z-40"
+                        onClick={toggleAssetsModal}
+                    />
+
+                    {/* Modal Content */}
+                    <div className="absolute  top-16 left-20 z-50">
+                        <AssetsCard />
+                    </div>
+                </>
+            )}
         </div>
     )
 }
