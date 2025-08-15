@@ -33,7 +33,7 @@ const ProfileCard = () => {
         <>
 
 
-            <div className='bg-gray-950 p-4 rounded-lg shadow-lg max-w-sm'>
+            <div className='bg-gradient-to-br from-gray-900 via-gray-950 to-black p-4 rounded-lg border border-gray-800/50 shadow-2xl backdrop-blur-sm max-w-sm'>
                 <div className='flex flex-col p-2 space-y-4'>
                     {/* name */}
                     <div className='text-white font-semibold text-lg border-b border-gray-700 pb-2'>

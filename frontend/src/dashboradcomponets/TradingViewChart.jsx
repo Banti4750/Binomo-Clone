@@ -273,9 +273,9 @@ const TradingViewChart = () => {
     };
 
     return (
-        <div className={`relative bg-gray-900 rounded-lg border border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 ' : 'h-full'}`}>
+        <div className={`relative bg-gradient-to-br from-gray-900 via-gray-950 to-black rounded-lg border border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 ' : 'h-full'}`}>
             {/* Enhanced Header */}
-            <div className="bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-600 p-4">
+            <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black border-b border-gray-600 p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
@@ -438,7 +438,7 @@ const TradingViewChart = () => {
             </div>
 
             {/* Footer - Real-time Additional Info */}
-            <div className="bg-gray-800 border-t border-gray-600 px-4 py-2">
+            <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black border-t border-gray-600 px-4 py-2">
                 <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-4">
                         <span className="text-gray-400">

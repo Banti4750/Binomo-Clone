@@ -16,7 +16,7 @@ const DashBoard = () => {
                         <Navbar />
                         <div className='flex h-[calc(100vh-80px)]'>
                             {/* Trading Chart Section - 80% width */}
-                            <div className='w-4/5 bg-gray-950 p-4 border-r border-gray-700'>
+                            <div className='w-4/5 bg-black p-4 border-r border-gray-700'>
                                 <div className='h-full bg-gray-900 rounded-lg border border-gray-700 flex flex-col'>
                                     <TradingViewChart />
                                 </div>

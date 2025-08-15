@@ -27,7 +27,7 @@ const Navbar = () => {
     return (
         <>
 
-            <div className='relative bg-gray-900 p-4 flex justify-between items-center shadow-lg border-b border-gray-700'>
+            <div className='relative bg-gradient-to-br from-gray-900 via-gray-950 to-black p-4 flex justify-between items-center shadow-lg border-b border-gray-700'>
                 {/* Left part */}
                 <div className='flex items-center gap-4'>
                     {/* Logo */}
