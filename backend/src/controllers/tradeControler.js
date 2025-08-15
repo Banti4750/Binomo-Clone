@@ -59,7 +59,7 @@ const getUserTrades = async (req, res) => {
         const { userId } = req.params;
         const { status, limit = 50, offset = 0 } = req.query;
 
-        let query = 'SELECT * FROM trades WHERE user_id = ?';
+        let query = 'SELECT * FROM trades WHERE user_id = ? and is_active = false';
         let params = [userId];
 
         if (status) {
@@ -198,10 +198,11 @@ const closeExpiredTrades = async () => {
 
             // Update trade record
             await db.query(`
-                UPDATE trades
-                SET status = ?, close_price = ?, profit_loss = ?, updated_at = NOW()
+            UPDATE trades
+            SET status = ?, close_price = ?, profit_loss = ?, updated_at = NOW(), is_active = ?
                 WHERE id = ?
-            `, [status, closePrice, profitLoss, trade.id]);
+            `, [status, closePrice, profitLoss, true, trade.id]);
+
 
             console.log(`💰 Trade ${trade.id} closed: ${status}, Entry: ${trade.entry_price}, Close: ${closePrice}, P&L: ${profitLoss}`);
         }
