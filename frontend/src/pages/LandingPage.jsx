@@ -5,7 +5,6 @@ import Peopleworldwide from '../components/Peopleworldwide'
 import Joinsuccessfultraders from '../components/Joinsuccessfultraders'
 import Deposit from '../components/Deposit'
 import Footer from '../components/Footer'
-import RealtimeCandlestickApp from '../components/ChartComponent'
 
 const LandingPage = () => {
     return (
@@ -15,7 +14,7 @@ const LandingPage = () => {
                 <Binomomakes />
                 <Peopleworldwide />
                 <Joinsuccessfultraders />
-                <RealtimeCandlestickApp />
+                {/* <RealtimeCandlestickApp /> */}
                 <Deposit />
                 <Footer />
             </div>

@@ -3,7 +3,7 @@ import { Plus, TrendingUp, DollarSign, Clock, BarChart3 } from 'lucide-react'
 import Navbar from '../dashboradcomponets/Navbar'
 import UserProvider from '../context/useGetUser'
 import AssetsProvider from '../context/useGetAssets'
-import { ToastContainer } from 'react-toastify'
+import TradingViewChart from '../dashboradcomponets/TradingViewChart'
 
 const DashBoard = () => {
     return (
@@ -17,29 +17,9 @@ const DashBoard = () => {
                             {/* Trading Chart Section - 80% width */}
                             <div className='w-4/5 bg-gray-950 p-4 border-r border-gray-700'>
                                 <div className='h-full bg-gray-900 rounded-lg border border-gray-700 flex flex-col'>
-                                    {/* Chart Header */}
-                                    <div className='p-4 border-b border-gray-700 flex justify-between items-center'>
-                                        <div className='flex items-center gap-4'>
-                                            <h2 className='text-white text-xl font-bold'>BTC/USD</h2>
-                                            <span className='text-green-400 text-lg font-semibold'>$45,240.50</span>
-                                            <span className='text-green-400 text-sm'>+2.4%</span>
-                                        </div>
-                                        <div className='flex items-center gap-2'>
-                                            <button className='text-gray-400 hover:text-white p-2 rounded'>1m</button>
-                                            <button className='text-white bg-gray-700 p-2 rounded'>5m</button>
-                                            <button className='text-gray-400 hover:text-white p-2 rounded'>15m</button>
-                                            <button className='text-gray-400 hover:text-white p-2 rounded'>1h</button>
-                                        </div>
-                                    </div>
 
-                                    {/* Chart Area */}
-                                    <div className='flex-1 p-4 flex items-center justify-center'>
-                                        <div className='text-gray-500 text-center'>
-                                            <BarChart3 size={64} className='mx-auto mb-4 opacity-50' />
-                                            <p className='text-lg'>Trading Chart</p>
-                                            <p className='text-sm'>Chart visualization will be implemented here</p>
-                                        </div>
-                                    </div>
+                                    <TradingViewChart symbol="BINANCE:BTCUSDT" />
+
                                 </div>
                             </div>
 
