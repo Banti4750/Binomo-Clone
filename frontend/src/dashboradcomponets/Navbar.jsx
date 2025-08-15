@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useUser } from '../context/useGetUser';
 import AssetsCard from './AssetsCard';
 import { useAssets } from '../context/useGetAssets';
 import ProfileCard from './ProfileCard';
-import { ToastContainer } from 'react-toastify';
 
 const Navbar = () => {
     const { user, fetchUserProfile } = useUser();

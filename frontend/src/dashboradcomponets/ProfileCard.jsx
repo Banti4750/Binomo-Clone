@@ -1,8 +1,8 @@
 import { LogOut, User, UserPlus } from 'lucide-react'
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { useUser } from '../context/useGetUser';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 
 const ProfileCard = () => {
     const { user, fetchUserProfile } = useUser();
