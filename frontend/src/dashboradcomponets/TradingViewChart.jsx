@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BarChart3, Maximize2, Settings, TrendingUp, TrendingDown, Volume2, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
+import { useAssets } from "../context/useGetAssets";
 
-const TradingViewChart = ({ symbol = "BINANCE:BTCUSDT" }) => {
+// const TradingViewChart = ({ symbol = "BINANCE:BTCUSDT" }) => {
+const TradingViewChart = () => {
+    const { activeAsset } = useAssets();
     const containerRef = useRef();
     const chartRef = useRef();
     const [isLoading, setIsLoading] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [chartInterval, setChartInterval] = useState("5m");
     const [showVolume, setShowVolume] = useState(true);
-
+    const symbol = activeAsset?.symbol || "BINANCE:BTCUSDT"
     // Real-time price data state
     const [priceData, setPriceData] = useState({
         price: 0,
@@ -270,7 +273,7 @@ const TradingViewChart = ({ symbol = "BINANCE:BTCUSDT" }) => {
     };
 
     return (
-        <div className={`relative bg-gray-900 rounded-lg border border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : 'h-full'}`}>
+        <div className={`relative bg-gray-900 rounded-lg border border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 ' : 'h-full'}`}>
             {/* Enhanced Header */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-600 p-4">
                 <div className="flex items-center justify-between">

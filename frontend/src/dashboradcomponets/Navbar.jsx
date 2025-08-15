@@ -52,7 +52,7 @@ const Navbar = () => {
                     <div className='bg-gray-800 px-3 py-2 rounded-xl text-white border border-gray-600'>
                         <div className='flex items-center gap-3'>
                             {/* Symbol */}
-                            <span className='font-semibold text-yellow-400'>{activeAsset?.symbol.slice(0, 3) || "BTC"}</span>
+                            <span className='font-semibold text-yellow-400'>{activeAsset?.symbol.slice(8, 11) || "BTC"}</span>
                             {/* Percentage profit */}
                             <span className='text-green-400 font-medium'>{activeAsset?.payout_percentage || "0"}%</span>
                         </div>
