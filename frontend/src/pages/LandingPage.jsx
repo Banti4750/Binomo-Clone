@@ -1,4 +1,3 @@
-import React from 'react'
 import HeroSection from '../components/HeroSection'
 import Binomomakes from '../components/Binomomakes'
 import Peopleworldwide from '../components/Peopleworldwide'
@@ -14,7 +13,6 @@ const LandingPage = () => {
                 <Binomomakes />
                 <Peopleworldwide />
                 <Joinsuccessfultraders />
-                {/* <RealtimeCandlestickApp /> */}
                 <Deposit />
                 <Footer />
             </div>
