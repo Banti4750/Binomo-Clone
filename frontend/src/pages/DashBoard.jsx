@@ -1,5 +1,3 @@
-import React from 'react'
-import { Plus, TrendingUp, DollarSign, Clock, BarChart3 } from 'lucide-react'
 import Navbar from '../dashboradcomponets/Navbar'
 import UserProvider from '../context/useGetUser'
 import AssetsProvider from '../context/useGetAssets'

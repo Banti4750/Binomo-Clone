@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { BarChart3, Maximize2, Settings, TrendingUp, TrendingDown, Volume2, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BarChart3, Maximize2, TrendingUp, TrendingDown, Volume2, Wifi, WifiOff } from "lucide-react";
 import { useAssets } from "../context/useGetAssets";
 
 // const TradingViewChart = ({ symbol = "BINANCE:BTCUSDT" }) => {
