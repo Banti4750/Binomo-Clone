@@ -1,29 +1,150 @@
-import { Clock, DollarSign, TrendingUp, AlertCircle, CheckCircle, Loader } from 'lucide-react'
+import { Clock, DollarSign, TrendingUp, AlertCircle, CheckCircle, Loader, Trophy, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import io from 'socket.io-client'
 
 const TradePage = () => {
     const [amount, setAmount] = useState('');
-    const [selectedTime, setSelectedTime] = useState(1); // Default to 2m
+    const [selectedTime, setSelectedTime] = useState(1); // Default to 1m
+    const [activeTrades, setActiveTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState(null);
-    const [activeTrades, setActiveTrades] = useState([]);
 
     // Mock user data - in real app, get from auth context/state
     const userId = "6"; // Replace with actual user ID from authentication
     const assetSymbol = "BTC/USD"; // Could be dynamic based on selected pair
 
-    // Show notification
-    const showNotification = (message, type = 'info') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
+    // Socket.io connection and event handlers
+    useEffect(() => {
+        const socket = io('http://localhost:5000');
+
+        // Join user-specific room for notifications
+        socket.emit('joinUser', userId);
+
+        // Listen for connection confirmation
+        socket.on('connected', (data) => {
+            console.log('🔔 Connected to notifications:', data.message);
+            toast.success('Connected to live updates!', {
+                position: "bottom-right",
+                autoClose: 2000,
+            });
+        });
+
+        // Listen for trade result notifications
+        socket.on('tradeResult', (data) => {
+            console.log('🔔 Trade result received:', data);
+            showTradeResult(data.trade, data.result);
+
+            // Remove completed trade from active trades
+            setActiveTrades(prev => prev.filter(trade => trade.id !== data.tradeId));
+
+            // Refresh user balance after trade completion
+            fetchUserBalance();
+        });
+
+        // Listen for trade creation confirmations
+        socket.on('tradeCreated', (data) => {
+            console.log('📈 Trade created:', data);
+            toast.info(`${data.trade.direction} trade created for ${data.trade.pair}`, {
+                position: "bottom-right",
+                autoClose: 3000,
+            });
+        });
+
+        // Handle connection errors
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            toast.error('Connection lost. Retrying...', {
+                position: "bottom-right",
+                autoClose: 3000,
+            });
+        });
+
+        // Cleanup on unmount
+        return () => {
+            socket.disconnect();
+        };
+    }, [userId]);
+
+    // Fetch user balance
+    const fetchUserBalance = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/trading/balance/${userId}`);
+            const data = await response.json();
+            if (data.success) {
+                console.log('💰 Balance updated:', data.balance);
+            }
+        } catch (error) {
+            console.error('Error fetching balance:', error);
+        }
     };
 
-    function handleSelectTime(time) {
-        setSelectedTime(time);
-    }
+    // Show notification using react-toastify
+    const showNotification = (message, type = 'info') => {
+        switch (type) {
+            case 'success':
+                toast.success(message);
+                break;
+            case 'error':
+                toast.error(message);
+                break;
+            case 'warning':
+                toast.warning(message);
+                break;
+            default:
+                toast.info(message);
+        }
+    };
+
+    // Show win/loss notifications
+    const showTradeResult = (trade, result) => {
+        if (result === 'WIN') {
+            toast.success(
+                <div className="flex items-center gap-2">
+                    <Trophy className="text-yellow-400" size={20} />
+                    <div>
+                        <div className="font-semibold">Trade Won! 🎉</div>
+                        <div className="text-sm">{trade.pair} - ${trade.amount}</div>
+                        <div className="text-sm text-green-300">Profit: ${trade.payout}</div>
+                    </div>
+                </div>,
+                {
+                    position: "top-center",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    className: "bg-green-800 text-white",
+                }
+            );
+        } else {
+            toast.error(
+                <div className="flex items-center gap-2">
+                    <X className="text-red-400" size={20} />
+                    <div>
+                        <div className="font-semibold">Trade Lost 😔</div>
+                        <div className="text-sm">{trade.pair} - ${trade.amount}</div>
+                        <div className="text-sm text-red-300">Loss: -${trade.amount}</div>
+                    </div>
+                </div>,
+                {
+                    position: "top-center",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    className: "bg-red-800 text-white",
+                }
+            );
+        }
+    };
 
     // API call to execute trade
-    const handleTrade = async (tradeType) => {
+    // Updated executeTrade function with consistent API endpoints
+    const executeTrade = async (tradeType) => {
         if (!amount || amount <= 0) {
             showNotification('Please enter a valid amount', 'error');
             return;
@@ -32,7 +153,7 @@ const TradePage = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/trading/trades', {
+            const response = await fetch('http://localhost:5000/api/trading/trades', { // Updated endpoint
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -42,7 +163,7 @@ const TradePage = () => {
                 body: JSON.stringify({
                     userId,
                     assetSymbol,
-                    tradeType: tradeType.toUpperCase() === "UP" ? "CALL" : "PUT", // 'CALL' or 'PUT'
+                    tradeType: tradeType.toUpperCase(), // 'CALL' or 'PUT'
                     stakeAmount: parseFloat(amount),
                     duration: selectedTime // in minutes
                 })
@@ -76,6 +197,36 @@ const TradePage = () => {
         }
     };
 
+    // Handle trade execution
+    function handleTrade(direction) {
+        const tradeType = direction === 'UP' ? 'CALL' : 'PUT';
+        executeTrade(tradeType);
+    }
+
+    // Load active trades and poll for updates
+    useEffect(() => {
+        const loadActiveTrades = async () => {
+            try {
+                const response = await fetch(`http://localhost:5000/api/trading/trades/user/${userId}?status=OPEN`);
+                const data = await response.json();
+
+                if (data.success) {
+                    setActiveTrades(data.trades || []);
+                }
+            } catch (error) {
+                console.error('Failed to load active trades:', error);
+                toast.error('Failed to load active trades');
+            }
+        };
+
+        // Initial load
+        loadActiveTrades();
+
+        // Backup polling every 30 seconds (fallback if socket fails)
+        const pollInterval = setInterval(loadActiveTrades, 30000);
+
+        return () => clearInterval(pollInterval);
+    }, [userId]);
 
     // Update trade timers
     useEffect(() => {
@@ -109,6 +260,9 @@ const TradePage = () => {
         return () => clearInterval(interval);
     }, [selectedTime]);
 
+    function handleSelectTime(time) {
+        setSelectedTime(time);
+    }
 
     const timeOptions = [
         { value: 1, label: '1m' },
@@ -243,9 +397,23 @@ const TradePage = () => {
                     )}
                 </div>
             </div>
+
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-center"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="dark"
+                toastClassName="bg-gray-800 text-white"
+            />
         </div>
     )
 }
-
 
 export default TradePage
