@@ -25,13 +25,6 @@ const ASSET_MAPPING = {
 const router = Router();
 dotenv.config();
 
-// Import price service (will be injected from main server)
-let priceService = null;
-
-// Function to set price service instance
-const setPriceService = (service) => {
-    priceService = service;
-};
 
 
 
@@ -78,145 +71,7 @@ const getUserTrades = async (req, res) => {
     }
 };
 
-// Create a new trade
-// const createTrade = async (req, res) => {
-//     try {
-//         const {
-//             userId,
-//             assetSymbol,
-//             tradeType,
-//             stakeAmount,
-//             duration // in minutes
-//         } = req.body;
 
-//         console.log(tradeType)
-
-//         // Validation
-//         if (!userId || !assetSymbol || !tradeType || !stakeAmount || !duration) {
-//             return res.status(400).json({ message: 'All fields are required' });
-//         }
-
-//         if (!['CALL', 'PUT'].includes(tradeType)) {
-//             return res.status(400).json({ message: 'Trade type must be CALL or PUT' });
-//         }
-
-//         if (stakeAmount < 1 || stakeAmount > 10000) {
-//             return res.status(400).json({ message: 'Stake amount must be between $1 and $10,000' });
-//         }
-
-//         if (duration < 1 || duration > 60) {
-//             return res.status(400).json({ message: 'Trade duration must be between 1-60 minutes' });
-//         }
-
-//         // Check if asset is supported
-//         const supportedAssets = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'BTC/USD', 'ETH/USD', 'GOLD', 'OIL'];
-//         if (!supportedAssets.includes(assetSymbol)) {
-//             return res.status(400).json({ message: 'Unsupported asset' });
-//         }
-
-//         // Check user balance
-//         const balanceCheck = await validateUserBalance(userId, stakeAmount);
-//         if (!balanceCheck.valid) {
-//             return res.status(400).json({ message: balanceCheck.message });
-//         }
-
-//         // Get current price and market data
-//         const entryPrice = getCurrentPrice(assetSymbol);
-//         console.log(entryPrice);
-//         const currentMarketData = priceService ? priceService.getAllPrices()[assetSymbol] : null;
-//         const payoutPercentage = calculatePayoutPercentage(duration, assetSymbol, currentMarketData);
-
-//         const startTime = new Date();
-//         const expiryTime = new Date(startTime.getTime() + (duration * 60 * 1000));
-
-//         // Deduct stake amount from user balance
-//         await updateUserBalance(userId, stakeAmount, 'subtract');
-
-//         // Create trade record
-//         const [result] = await db.query(`
-//             INSERT INTO trades (
-//                 user_id, asset_symbol, trade_type, stake_amount,
-//                 payout_percentage, entry_price, start_time, expiry_time, status
-//             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'OPEN')
-//         `, [userId, assetSymbol, tradeType, stakeAmount, payoutPercentage, entryPrice, startTime, expiryTime]);
-
-//         res.status(201).json({
-//             message: 'Trade created successfully',
-//             tradeId: result.insertId,
-//             entryPrice,
-//             payoutPercentage,
-//             expiryTime,
-//             estimatedPayout: Math.round(stakeAmount * (payoutPercentage / 100)),
-//             currentMarketData: currentMarketData || {
-//                 price: entryPrice,
-//                 change: 0,
-//                 changePercent: 0,
-//                 timestamp: Date.now(),
-//                 trend: 'neutral'
-//             }
-//         });
-//     } catch (error) {
-//         console.error('Error creating trade:', error);
-//         res.status(500).json({ message: 'Internal server error' });
-//     }
-// };
-
-// Close expired trades and calculate results
-// const closeExpiredTrades = async () => {
-//     try {
-//         const now = new Date();
-
-//         // Get all open trades that have expired
-//         const [expiredTrades] = await db.query(`
-//             SELECT id, user_id, asset_symbol, trade_type, stake_amount,
-//                    payout_percentage, entry_price, expiry_time
-//             FROM trades
-//             WHERE status = 'OPEN' AND expiry_time <= ?
-//         `, [now]);
-
-//         for (const trade of expiredTrades) {
-//             const closePrice = getCurrentPrice(trade.asset_symbol);
-//             let status = 'LOSS';
-//             let profitLoss = -trade.stake_amount;
-
-//             // Determine if trade won or lost
-//             const priceDifference = closePrice - trade.entry_price;
-//             const priceMovedUp = priceDifference > 0;
-//             const priceMovedDown = priceDifference < 0;
-
-//             // For very small price movements, consider it a tie (loss for house edge)
-//             const minimumMovement = trade.entry_price * 0.0001; // 0.01% minimum movement
-
-//             if (Math.abs(priceDifference) < minimumMovement) {
-//                 status = 'LOSS'; // No significant movement = loss
-//             } else if ((trade.trade_type === 'CALL' && priceMovedUp) ||
-//                 (trade.trade_type === 'PUT' && priceMovedDown)) {
-//                 status = 'WIN';
-//                 const payout = (trade.stake_amount * trade.payout_percentage / 100);
-//                 profitLoss = payout;
-
-//                 // Add winnings to user balance (stake + profit)
-//                 await updateUserBalance(trade.user_id, parseInt(trade.stake_amount) + parseInt(profitLoss), 'add');
-//             }
-
-//             // Update trade record
-//             await db.query(`
-//             UPDATE trades
-//             SET status = ?, close_price = ?, profit_loss = ?, updated_at = NOW(), is_active = ?
-//                 WHERE id = ?
-//             `, [status, closePrice, profitLoss, true, trade.id]);
-
-
-//             console.log(`💰 Trade ${trade.id} closed: ${status}, Entry: ${trade.entry_price}, Close: ${closePrice}, P&L: ${profitLoss}`);
-//         }
-
-//         if (expiredTrades.length > 0) {
-//             console.log(`⚡ Processed ${expiredTrades.length} expired trades`);
-//         }
-//     } catch (error) {
-//         console.error('Error closing expired trades:', error);
-//     }
-// };
 
 const getCurrentPrice = async (assetSymbol) => {
     try {
@@ -562,19 +417,8 @@ const getTradeById = async (req, res) => {
     }
 };
 
-// Get current asset prices
-const getAssetPrices = async (req, res) => {
-    try {
-        if (!priceService) {
-            return res.status(503).json({ message: 'Price service not available' });
-        }
 
-        res.status(200).json(priceService.getAllPrices());
-    } catch (error) {
-        console.error('Error fetching asset prices:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
+
 
 // Get trading statistics for a user
 const getUserTradingStats = async (req, res) => {
@@ -659,9 +503,8 @@ router.get('/trades/user/:userId', getUserTrades);//✅
 router.get('/trades/stats/:userId', getUserTradingStats);//✅
 router.get('/trades/:tradeId', getTradeById);
 router.get('/balance/:userId', getUserBalance);//✅
-router.get('/assets/prices', getAssetPrices);//✅
 router.post('/trades', createTrade);//✅
 
 // Export everything needed
 export default router;
-export { startTradeSettlement, stopTradeSettlement, setPriceService };
+export { startTradeSettlement, stopTradeSettlement };
