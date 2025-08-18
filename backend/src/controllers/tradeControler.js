@@ -5,15 +5,50 @@ import dotenv from 'dotenv';
 import validateUserBalance from '../../utils/tradeHelper/validateUserBalance.js';
 import updateUserBalance from '../../utils/tradeHelper/updateUserBalance.js';
 import axios from 'axios';
+import WebSocket from 'ws';
 
-// CoinGecko API configuration
-const COINGECKO_API_BASE = 'https://api.coingecko.com/api/v3';
+// Binance API configuration
+const BINANCE_API_BASE = 'https://api.binance.com/api/v3';
+const BINANCE_WS_BASE = 'wss://stream.binance.com:9443/ws';
 const PRICE_CACHE = new Map();
-const CACHE_DURATION = 30000; // 30 seconds cache
 
+// Enhanced asset mapping with Binance symbols
 const ASSET_MAPPING = {
-    'BTC/USD': { type: 'crypto', id: 'bitcoin', currency: 'usd' },
-    'ETH/USD': { type: 'crypto', id: 'ethereum', currency: 'usd' },
+    'BTC/USD': {
+        type: 'crypto',
+        binanceSymbol: 'BTCUSDT',
+        id: 'bitcoin',
+        currency: 'usd',
+        stream: 'btcusdt@ticker'
+    },
+    'ETH/USD': {
+        type: 'crypto',
+        binanceSymbol: 'ETHUSDT',
+        id: 'ethereum',
+        currency: 'usd',
+        stream: 'ethusdt@ticker'
+    },
+    'BNB/USD': {
+        type: 'crypto',
+        binanceSymbol: 'BNBUSDT',
+        id: 'binancecoin',
+        currency: 'usd',
+        stream: 'bnbusdt@ticker'
+    },
+    'ADA/USD': {
+        type: 'crypto',
+        binanceSymbol: 'ADAUSDT',
+        id: 'cardano',
+        currency: 'usd',
+        stream: 'adausdt@ticker'
+    },
+    'SOL/USD': {
+        type: 'crypto',
+        binanceSymbol: 'SOLUSDT',
+        id: 'solana',
+        currency: 'usd',
+        stream: 'solusdt@ticker'
+    },
     'EUR/USD': { type: 'forex', symbol: 'EURUSD' },
     'GBP/USD': { type: 'forex', symbol: 'GBPUSD' },
     'USD/JPY': { type: 'forex', symbol: 'USDJPY' },
@@ -24,78 +59,181 @@ const ASSET_MAPPING = {
 const router = Router();
 dotenv.config();
 
-// Store for Socket.io instance (will be set from server)
+// Store for Socket.io instance and WebSocket connections
 let io = null;
+let binanceWS = null;
+const priceStreams = new Map();
+const wsConnections = new Map();
+
+// Real-time price storage
+const REAL_TIME_PRICES = new Map();
 
 // Set Socket.io instance
 const setSocketIO = (socketInstance) => {
     io = socketInstance;
 };
 
-// Calculate payout percentage based on market conditions
-const calculatePayoutPercentage = (duration, assetSymbol, currentMarketData) => {
-    const basePayout = 80; // 80% base payout
-    const durationBonus = Math.min(duration / 10, 5); // Max 5% bonus for longer trades
+// Initialize Binance WebSocket connections for real-time prices
+const initializeBinanceWebSocket = () => {
+    const cryptoAssets = Object.entries(ASSET_MAPPING)
+        .filter(([_, asset]) => asset.type === 'crypto')
+        .map(([symbol, asset]) => ({ symbol, ...asset }));
 
-    // Add volatility bonus
-    let volatilityBonus = 0;
-    if (currentMarketData && currentMarketData.changePercent) {
-        volatilityBonus = Math.min(Math.abs(currentMarketData.changePercent) * 2, 10);
-    }
+    if (cryptoAssets.length === 0) return;
 
-    const randomFactor = Math.random() * 5; // Add some randomness
+    // Create combined stream for all crypto pairs
+    const streams = cryptoAssets.map(asset => asset.stream).join('/');
+    const wsUrl = `${BINANCE_WS_BASE}/${streams}`;
 
-    return Math.round(Math.min(basePayout + durationBonus + volatilityBonus + randomFactor, 95));
+    console.log('🔗 Connecting to Binance WebSocket:', wsUrl);
+
+    binanceWS = new WebSocket(wsUrl);
+
+    binanceWS.on('open', () => {
+        console.log('✅ Binance WebSocket connected');
+
+        // Send ping every 30 seconds to keep connection alive
+        const pingInterval = setInterval(() => {
+            if (binanceWS.readyState === WebSocket.OPEN) {
+                binanceWS.ping();
+            } else {
+                clearInterval(pingInterval);
+            }
+        }, 30000);
+    });
+
+    binanceWS.on('message', (data) => {
+        try {
+            const tickerData = JSON.parse(data);
+
+            if (tickerData.stream && tickerData.data) {
+                const { s: symbol, c: price, P: priceChangePercent, v: volume } = tickerData.data;
+
+                // Find the asset symbol that matches this Binance symbol
+                const assetEntry = Object.entries(ASSET_MAPPING)
+                    .find(([_, asset]) => asset.binanceSymbol === symbol);
+
+                if (assetEntry) {
+                    const [assetSymbol, assetConfig] = assetEntry;
+                    const realTimePrice = parseFloat(price);
+                    const changePercent = parseFloat(priceChangePercent);
+                    const vol = parseFloat(volume);
+
+                    // Store real-time price data
+                    REAL_TIME_PRICES.set(assetSymbol, {
+                        price: realTimePrice,
+                        changePercent,
+                        volume: vol,
+                        timestamp: Date.now(),
+                        trend: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral',
+                        source: 'binance_ws'
+                    });
+
+                    // Emit price update to all connected clients
+                    if (io) {
+                        io.emit('priceUpdate', {
+                            symbol: assetSymbol,
+                            price: realTimePrice,
+                            change: changePercent,
+                            trend: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral',
+                            timestamp: Date.now()
+                        });
+                    }
+
+                    // Cache the price
+                    PRICE_CACHE.set(`price_${assetSymbol}`, {
+                        price: realTimePrice,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error parsing Binance WebSocket data:', error);
+        }
+    });
+
+    binanceWS.on('error', (error) => {
+        console.error('❌ Binance WebSocket error:', error);
+    });
+
+    binanceWS.on('close', (code, reason) => {
+        console.log(`🔌 Binance WebSocket closed: ${code} - ${reason}`);
+
+        // Attempt to reconnect after 5 seconds
+        setTimeout(() => {
+            console.log('🔄 Attempting to reconnect to Binance WebSocket...');
+            initializeBinanceWebSocket();
+        }, 5000);
+    });
 };
 
-// Get current price from CoinGecko or other APIs
+// Get current price with Binance integration
 const getCurrentPrice = async (assetSymbol) => {
     try {
-        const cacheKey = `price_${assetSymbol}`;
-        const cachedData = PRICE_CACHE.get(cacheKey);
-
-        // Return cached price if still valid
-        if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-            return cachedData.price;
-        }
-
         const asset = ASSET_MAPPING[assetSymbol];
         if (!asset) {
             throw new Error(`Unsupported asset: ${assetSymbol}`);
         }
 
+        // For crypto assets, try real-time price first
+        if (asset.type === 'crypto') {
+            // Check real-time WebSocket price first
+            const realTimePrice = REAL_TIME_PRICES.get(assetSymbol);
+            if (realTimePrice && (Date.now() - realTimePrice.timestamp) < 5000) {
+                console.log(`📡 Using real-time price for ${assetSymbol}: $${realTimePrice.price}`);
+                return realTimePrice.price;
+            }
+
+            // Fallback to Binance REST API for fresh price
+            try {
+                const response = await axios.get(`${BINANCE_API_BASE}/ticker/price`, {
+                    params: { symbol: asset.binanceSymbol },
+                    timeout: 2000 // 2 second timeout for speed
+                });
+
+                const price = parseFloat(response.data.price);
+
+                // Cache the price
+                PRICE_CACHE.set(`price_${assetSymbol}`, {
+                    price,
+                    timestamp: Date.now()
+                });
+
+                console.log(`🔄 Binance REST API price for ${assetSymbol}: $${price}`);
+                return price;
+
+            } catch (binanceError) {
+                console.error(`❌ Binance API error for ${assetSymbol}:`, binanceError.message);
+
+                // Fallback to CoinGecko
+                const response = await axios.get(
+                    'https://api.coingecko.com/api/v3/simple/price',
+                    {
+                        params: {
+                            ids: asset.id,
+                            vs_currencies: asset.currency
+                        },
+                        timeout: 3000
+                    }
+                );
+
+                const price = response.data[asset.id][asset.currency];
+                console.log(`🦎 CoinGecko fallback price for ${assetSymbol}: $${price}`);
+                return price;
+            }
+        }
+
+        // For non-crypto assets, use existing logic
         let price;
 
-        if (asset.type === 'crypto') {
-            // Fetch cryptocurrency prices from CoinGecko
-            const response = await axios.get(
-                `${COINGECKO_API_BASE}/simple/price`,
-                {
-                    params: {
-                        ids: asset.id,
-                        vs_currencies: asset.currency,
-                        include_24hr_change: true
-                    },
-                    timeout: 5000
-                }
-            );
-
-            price = response.data[asset.id][asset.currency];
-
-        } else if (asset.type === 'forex') {
-            // For forex, you might want to use a different API or CoinGecko's forex data
-            // Using a mock forex API call - replace with actual forex API
-            const forexPrice = await getForexPrice(asset.symbol);
-            price = forexPrice;
-
+        if (asset.type === 'forex') {
+            price = await getForexPrice(asset.symbol);
         } else if (asset.type === 'commodity') {
-            // For commodities, use appropriate API
-            const commodityPrice = await getCommodityPrice(asset.symbol);
-            price = commodityPrice;
+            price = await getCommodityPrice(asset.symbol);
         }
 
         // Cache the price
-        PRICE_CACHE.set(cacheKey, {
+        PRICE_CACHE.set(`price_${assetSymbol}`, {
             price,
             timestamp: Date.now()
         });
@@ -103,19 +241,22 @@ const getCurrentPrice = async (assetSymbol) => {
         return price;
 
     } catch (error) {
-        console.error(`Error fetching price for ${assetSymbol}:`, error.message);
+        console.error(`❌ Error fetching price for ${assetSymbol}:`, error.message);
 
-        // Return cached price if API fails
+        // Return cached price if available
         const cachedData = PRICE_CACHE.get(`price_${assetSymbol}`);
         if (cachedData) {
-            console.log(`Using cached price for ${assetSymbol}`);
+            console.log(`📦 Using cached price for ${assetSymbol}: $${cachedData.price}`);
             return cachedData.price;
         }
 
-        // Fallback prices if no cache available
+        // Fallback prices
         const fallbackPrices = {
             'BTC/USD': 45000,
             'ETH/USD': 2800,
+            'BNB/USD': 300,
+            'ADA/USD': 0.50,
+            'SOL/USD': 100,
             'EUR/USD': 1.0850,
             'GBP/USD': 1.2650,
             'USD/JPY': 149.50,
@@ -123,17 +264,103 @@ const getCurrentPrice = async (assetSymbol) => {
             'OIL': 75.50
         };
 
-        return fallbackPrices[assetSymbol] || 100;
+        const fallbackPrice = fallbackPrices[assetSymbol] || 100;
+        console.log(`⚠️  Using fallback price for ${assetSymbol}: $${fallbackPrice}`);
+        return fallbackPrice;
     }
 };
 
-// Forex price fetcher (replace with actual forex API)
+// Get enhanced market data with Binance integration
+const getMarketData = async (assetSymbol) => {
+    try {
+        const asset = ASSET_MAPPING[assetSymbol];
+        if (!asset) return null;
+
+        if (asset.type === 'crypto') {
+            // Try real-time data first
+            const realTimeData = REAL_TIME_PRICES.get(assetSymbol);
+            if (realTimeData && (Date.now() - realTimeData.timestamp) < 5000) {
+                return {
+                    price: realTimeData.price,
+                    change: realTimeData.changePercent,
+                    changePercent: realTimeData.changePercent,
+                    volume: realTimeData.volume,
+                    timestamp: realTimeData.timestamp,
+                    trend: realTimeData.trend,
+                    source: 'binance_realtime'
+                };
+            }
+
+            // Fallback to Binance 24hr ticker
+            try {
+                const response = await axios.get(`${BINANCE_API_BASE}/ticker/24hr`, {
+                    params: { symbol: asset.binanceSymbol },
+                    timeout: 2000
+                });
+
+                const data = response.data;
+                return {
+                    price: parseFloat(data.lastPrice),
+                    change: parseFloat(data.priceChange),
+                    changePercent: parseFloat(data.priceChangePercent),
+                    volume: parseFloat(data.volume),
+                    high24h: parseFloat(data.highPrice),
+                    low24h: parseFloat(data.lowPrice),
+                    timestamp: Date.now(),
+                    trend: parseFloat(data.priceChangePercent) > 0 ? 'up' :
+                        parseFloat(data.priceChangePercent) < 0 ? 'down' : 'neutral',
+                    source: 'binance_rest'
+                };
+
+            } catch (binanceError) {
+                console.error(`❌ Binance market data error for ${assetSymbol}:`, binanceError.message);
+                return null;
+            }
+        }
+
+        // For non-crypto assets, return basic data
+        const price = await getCurrentPrice(assetSymbol);
+        return {
+            price,
+            change: 0,
+            changePercent: 0,
+            volume: 0,
+            timestamp: Date.now(),
+            trend: 'neutral',
+            source: 'fallback'
+        };
+
+    } catch (error) {
+        console.error(`❌ Error fetching market data for ${assetSymbol}:`, error);
+        return null;
+    }
+};
+
+// Calculate payout percentage based on market conditions
+const calculatePayoutPercentage = (duration, assetSymbol, currentMarketData) => {
+    const basePayout = 80; // 80% base payout
+    const durationBonus = Math.min(duration / 10, 5); // Max 5% bonus for longer trades
+
+    // Add volatility bonus based on real-time data
+    let volatilityBonus = 0;
+    if (currentMarketData && currentMarketData.changePercent) {
+        volatilityBonus = Math.min(Math.abs(currentMarketData.changePercent) * 2, 10);
+    }
+
+    // Reduce payout slightly for high-frequency crypto pairs (house edge)
+    let assetAdjustment = 0;
+    if (ASSET_MAPPING[assetSymbol]?.type === 'crypto') {
+        assetAdjustment = -2; // 2% reduction for crypto volatility
+    }
+
+    const randomFactor = Math.random() * 3; // Reduce randomness
+
+    return Math.round(Math.min(basePayout + durationBonus + volatilityBonus + assetAdjustment + randomFactor, 92));
+};
+
+// Forex price fetcher (unchanged)
 const getForexPrice = async (symbol) => {
     try {
-        // Example using Alpha Vantage, Fixer.io, or similar forex API
-        // const response = await axios.get(`https://api.fixer.io/latest?base=EUR&symbols=USD`);
-
-        // Mock implementation - replace with actual API call
         const mockPrices = {
             'EURUSD': 1.0850 + (Math.random() - 0.5) * 0.01,
             'GBPUSD': 1.2650 + (Math.random() - 0.5) * 0.01,
@@ -142,15 +369,14 @@ const getForexPrice = async (symbol) => {
 
         return mockPrices[symbol] || 1.0000;
     } catch (error) {
-        console.error(`Error fetching forex price for ${symbol}:`, error);
+        console.error(`❌ Error fetching forex price for ${symbol}:`, error);
         return 1.0000;
     }
 };
 
-// Commodity price fetcher
+// Commodity price fetcher (unchanged)
 const getCommodityPrice = async (symbol) => {
     try {
-        // You can use APIs like Alpha Vantage, Quandl, or commodity-specific APIs
         const mockPrices = {
             'XAUUSD': 2020 + (Math.random() - 0.5) * 10,
             'CRUDE_OIL': 75.50 + (Math.random() - 0.5) * 2
@@ -158,49 +384,8 @@ const getCommodityPrice = async (symbol) => {
 
         return mockPrices[symbol] || 100;
     } catch (error) {
-        console.error(`Error fetching commodity price for ${symbol}:`, error);
+        console.error(`❌ Error fetching commodity price for ${symbol}:`, error);
         return 100;
-    }
-};
-
-// Enhanced market data fetcher
-const getMarketData = async (assetSymbol) => {
-    try {
-        const asset = ASSET_MAPPING[assetSymbol];
-        if (!asset || asset.type !== 'crypto') {
-            return null;
-        }
-
-        const response = await axios.get(
-            `${COINGECKO_API_BASE}/simple/price`,
-            {
-                params: {
-                    ids: asset.id,
-                    vs_currencies: asset.currency,
-                    include_24hr_change: true,
-                    include_24hr_vol: true,
-                    include_market_cap: true
-                },
-                timeout: 5000
-            }
-        );
-
-        const data = response.data[asset.id];
-        const change24h = data[`${asset.currency}_24h_change`] || 0;
-
-        return {
-            price: data[asset.currency],
-            change: change24h,
-            changePercent: change24h,
-            volume: data[`${asset.currency}_24h_vol`] || 0,
-            marketCap: data[`${asset.currency}_market_cap`] || 0,
-            timestamp: Date.now(),
-            trend: change24h > 0 ? 'up' : change24h < 0 ? 'down' : 'neutral'
-        };
-
-    } catch (error) {
-        console.error(`Error fetching market data for ${assetSymbol}:`, error);
-        return null;
     }
 };
 
@@ -256,8 +441,8 @@ const getUserTrades = async (req, res) => {
 
         const [trades] = await db.query(query, params);
 
-        // Format trades for frontend
-        const formattedTrades = trades.map(trade => {
+        // Format trades for frontend with real-time prices
+        const formattedTrades = await Promise.all(trades.map(async (trade) => {
             const now = new Date();
             const expiryTime = new Date(trade.expiry_time);
             const isExpired = now >= expiryTime;
@@ -279,6 +464,16 @@ const getUserTrades = async (req, res) => {
                 progress = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
             }
 
+            // Get current price for active trades
+            let currentPrice = null;
+            if (trade.status === 'OPEN') {
+                try {
+                    currentPrice = await getCurrentPrice(trade.asset_symbol);
+                } catch (error) {
+                    console.error(`Error fetching current price for ${trade.asset_symbol}:`, error);
+                }
+            }
+
             return {
                 id: trade.id,
                 pair: trade.asset_symbol,
@@ -290,12 +485,15 @@ const getUserTrades = async (req, res) => {
                 result: trade.status === 'CLOSED' ? (trade.profit_loss > 0 ? 'WIN' : 'LOSS') : null,
                 payout: trade.profit_loss || 0,
                 entryPrice: trade.entry_price,
+                currentPrice,
                 closePrice: trade.close_price,
                 expiresAt: trade.expiry_time,
                 startedAt: trade.start_time,
-                isActive: trade.is_active
+                isActive: trade.is_active,
+                unrealizedPnL: currentPrice && trade.status === 'OPEN' ?
+                    ((trade.trade_type === 'CALL' ? currentPrice - trade.entry_price : trade.entry_price - currentPrice) > 0 ? 'WINNING' : 'LOSING') : null
             };
-        });
+        }));
 
         res.status(200).json({
             success: true,
@@ -303,7 +501,7 @@ const getUserTrades = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching user trades:', error);
+        console.error('❌ Error fetching user trades:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -324,12 +522,12 @@ const getTradeById = async (req, res) => {
 
         res.status(200).json(trades[0]);
     } catch (error) {
-        console.error('Error fetching trade:', error);
+        console.error('❌ Error fetching trade:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
 
-// Updated createTrade function
+// Updated createTrade function with Binance integration
 const createTrade = async (req, res) => {
     try {
         const {
@@ -340,7 +538,7 @@ const createTrade = async (req, res) => {
             duration // in minutes
         } = req.body;
 
-        console.log('Trade Type:', tradeType);
+        console.log('📊 Creating trade:', { userId, assetSymbol, tradeType, stakeAmount, duration });
 
         // Validation
         if (!userId || !assetSymbol || !tradeType || !stakeAmount || !duration) {
@@ -360,9 +558,13 @@ const createTrade = async (req, res) => {
         }
 
         // Check if asset is supported
-        const supportedAssets = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'BTC/USD', 'ETH/USD', 'GOLD', 'OIL'];
+        const supportedAssets = Object.keys(ASSET_MAPPING);
         if (!supportedAssets.includes(assetSymbol)) {
-            return res.status(400).json({ success: false, message: 'Unsupported asset' });
+            return res.status(400).json({
+                success: false,
+                message: 'Unsupported asset',
+                supportedAssets
+            });
         }
 
         // Check user balance
@@ -371,9 +573,9 @@ const createTrade = async (req, res) => {
             return res.status(400).json({ success: false, message: balanceCheck.message });
         }
 
-        // Get current price from CoinGecko/APIs
+        // Get current price with Binance integration (ultra-low latency)
         const entryPrice = await getCurrentPrice(assetSymbol);
-        console.log('Entry Price:', entryPrice);
+        console.log(`💰 Entry price for ${assetSymbol}: $${entryPrice}`);
 
         // Get enhanced market data
         const currentMarketData = await getMarketData(assetSymbol);
@@ -402,7 +604,8 @@ const createTrade = async (req, res) => {
                     pair: assetSymbol,
                     direction: tradeType,
                     amount: stakeAmount,
-                    duration: duration
+                    duration: duration,
+                    entryPrice
                 }
             });
         }
@@ -428,12 +631,13 @@ const createTrade = async (req, res) => {
                 change: 0,
                 changePercent: 0,
                 timestamp: Date.now(),
-                trend: 'neutral'
+                trend: 'neutral',
+                source: 'fallback'
             }
         });
 
     } catch (error) {
-        console.error('Error creating trade:', error);
+        console.error('❌ Error creating trade:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -441,7 +645,7 @@ const createTrade = async (req, res) => {
     }
 };
 
-// Enhanced closeExpiredTrades with notifications
+// Enhanced closeExpiredTrades with Binance real-time prices
 const closeExpiredTrades = async () => {
     try {
         const now = new Date();
@@ -458,7 +662,7 @@ const closeExpiredTrades = async () => {
 
         for (const trade of expiredTrades) {
             try {
-                // Get current price from CoinGecko/APIs
+                // Get current price with Binance integration (ultra-fast)
                 const closePrice = await getCurrentPrice(trade.asset_symbol);
                 let status = 'LOSS';
                 let profitLoss = -trade.stake_amount;
