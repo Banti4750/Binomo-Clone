@@ -9,7 +9,7 @@ import userRoutes from './src/controllers/userControler.js'; // Fixed filename
 import assetsRoutes from './src/controllers/assetsController.js'; // Fixed filename
 
 // Import new trading functionality
-import tradingRoutes from './src/controllers/tradeControler.js'; // Fixed filename
+import tradingRoutes, { startTradeSettlement } from './src/controllers/tradeControler.js'; // Fixed filename
 
 // Initialize environment
 dotenv.config();
@@ -33,7 +33,28 @@ app.use('/api/user', userRoutes);
 app.use('/api/trading', tradingRoutes);
 app.use('/api/assets', assetsRoutes); // Assuming assets are part of trading
 
+const startServer = async () => {
+    try {
 
-app.listen(PORT, () => {
-    console.log(`✅ Server is running on http://localhost:${PORT}`);
-});
+        // Start trade settlement
+        startTradeSettlement();
+        console.log('⚖️  Trade settlement started');
+
+        // Start HTTP server with WebSocket support
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Server running on port ${PORT}`);
+        });
+
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+// Start the server
+startServer();
+
+
+// app.listen(PORT, () => {
+//     console.log(`✅ Server is running on http://localhost:${PORT}`);
+// });
