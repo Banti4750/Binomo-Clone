@@ -1,55 +1,12 @@
-import { Clock, DollarSign, TrendingUp } from 'lucide-react'
+import { Clock, DollarSign, TrendingUp, AlertCircle, CheckCircle, Loader } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const TradePage = () => {
     const [amount, setAmount] = useState('');
     const [selectedTime, setSelectedTime] = useState(1); // Default to 2m
-    const [activeTrades, setActiveTrades] = useState([
-        {
-            id: 1,
-            pair: 'BTC/USD',
-            direction: 'UP',
-            amount: 10450,
-            timeLeft: '2:34',
-            progress: 75
-        },
-        {
-            id: 1,
-            pair: 'BTC/USD',
-            direction: 'UP',
-            amount: 10450,
-            timeLeft: '2:34',
-            progress: 75
-        },
-        {
-            id: 1,
-            pair: 'BTC/USD',
-            direction: 'UP',
-            amount: 10450,
-            timeLeft: '2:34',
-            progress: 75
-        },
-        {
-            id: 1,
-            pair: 'BTC/USD',
-            direction: 'UP',
-            amount: 10450,
-            timeLeft: '2:34',
-            progress: 75
-        },
-        {
-            id: 1,
-            pair: 'BTC/USD',
-            direction: 'UP',
-            amount: 10450,
-            timeLeft: '2:34',
-            progress: 75
-        },
-
-
-    ]);
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [activeTrades, setActiveTrades] = useState([]);
 
     // Mock user data - in real app, get from auth context/state
     const userId = "6"; // Replace with actual user ID from authentication
@@ -118,31 +75,6 @@ const TradePage = () => {
             setIsLoading(false);
         }
     };
-
-    // // Handle trade execution
-    // function handleTrade(direction) {
-    //     const tradeType = direction === 'UP' ? 'CALL' : 'PUT';
-    //     executeTrade(tradeType);
-    // }
-
-    // function handleTrade(direction) {
-    //     if (!amount || amount <= 0) {
-    //         alert('Please enter a valid amount');
-    //         return;
-    //     }
-
-    //     const newTrade = {
-    //         id: Date.now(),
-    //         pair: 'BTC/USD',
-    //         direction: direction,
-    //         amount: parseFloat(amount),
-    //         timeLeft: `${selectedTime}:00`,
-    //         progress: 0
-    //     };
-
-    //     setActiveTrades(prev => [...prev, newTrade]);
-    //     setAmount(''); // Clear amount after trade
-    // }
 
 
     // Update trade timers
