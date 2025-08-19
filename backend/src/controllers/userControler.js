@@ -86,8 +86,8 @@ const getUserProfile = async (req, res) => {
 }
 
 // all routes related to user profile
-router.post('/change-username', verifyToken, changeUsername);
-router.post('/update-profile', verifyToken, updateProfile);
+router.put('/change-username', verifyToken, changeUsername);
+router.put('/update-profile', verifyToken, updateProfile);
 router.get('/profile', verifyToken, getUserProfile);
 
 export default router;

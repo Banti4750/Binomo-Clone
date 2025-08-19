@@ -29,6 +29,13 @@ const ASSET_MAPPING = {
         currency: 'usd',
         stream: 'ethusdt@ticker'
     },
+    'ADA/USD': {
+        type: 'crypto',
+        binanceSymbol: 'ADAUSDT',
+        id: 'cardano',
+        currency: 'usd',
+        stream: 'adausdt@ticker'
+    },
     'BNB/USD': {
         type: 'crypto',
         binanceSymbol: 'BNBUSDT',
@@ -36,12 +43,12 @@ const ASSET_MAPPING = {
         currency: 'usd',
         stream: 'bnbusdt@ticker'
     },
-    'ADA/USD': {
+    'XRP/USD': {
         type: 'crypto',
-        binanceSymbol: 'ADAUSDT',
-        id: 'cardano',
+        binanceSymbol: 'XRPUSDT',
+        id: 'ripple',
         currency: 'usd',
-        stream: 'adausdt@ticker'
+        stream: 'xrpusdt@ticker'
     },
     'SOL/USD': {
         type: 'crypto',
@@ -50,11 +57,37 @@ const ASSET_MAPPING = {
         currency: 'usd',
         stream: 'solusdt@ticker'
     },
-    'EUR/USD': { type: 'forex', symbol: 'EURUSD' },
-    'GBP/USD': { type: 'forex', symbol: 'GBPUSD' },
-    'USD/JPY': { type: 'forex', symbol: 'USDJPY' },
-    'GOLD': { type: 'commodity', symbol: 'XAUUSD' },
-    'OIL': { type: 'commodity', symbol: 'CRUDE_OIL' }
+    'DOT/USD': {
+        type: 'crypto',
+        binanceSymbol: 'DOTUSDT',
+        id: 'polkadot',
+        currency: 'usd',
+        stream: 'dotusdt@ticker'
+    },
+
+
+    'LTC/USD': {
+        type: 'crypto',
+        binanceSymbol: 'LTCUSDT',
+        id: 'litecoin',
+        currency: 'usd',
+        stream: 'ltcusdt@ticker'
+    },
+    'UNI/USD': {
+        type: 'crypto',
+        binanceSymbol: 'UNIUSDT',
+        id: 'uniswap',
+        currency: 'usd',
+        stream: 'uniusdt@ticker'
+    },
+
+    'VET/USD': {
+        type: 'crypto',
+        binanceSymbol: 'VETUSDT',
+        id: 'vechain',
+        currency: 'usd',
+        stream: 'vetusdt@ticker'
+    }
 };
 
 const router = Router();
@@ -579,6 +612,8 @@ const createTrade = async (req, res) => {
 
         // Get enhanced market data
         const currentMarketData = await getMarketData(assetSymbol);
+
+        // const payoutPercentage = await db.query(`SELCT `)
         const payoutPercentage = calculatePayoutPercentage(duration, assetSymbol, currentMarketData);
 
         const startTime = new Date();

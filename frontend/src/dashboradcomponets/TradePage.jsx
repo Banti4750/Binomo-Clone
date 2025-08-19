@@ -4,9 +4,11 @@ import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import io from 'socket.io-client'
 import { useUser } from '../context/useGetUser'
+import { useAssets } from '../context/useGetAssets'
 
 const TradePage = () => {
     const { fetchUserProfile, user } = useUser();
+    const { activeAsset } = useAssets();
     const [amount, setAmount] = useState('');
     const [selectedTime, setSelectedTime] = useState(1); // Default to 1m
     const [activeTrades, setActiveTrades] = useState([]);
@@ -15,7 +17,7 @@ const TradePage = () => {
 
     // Mock user data - in real app, get from auth context/state
     const userId = user?.id; // Replace with actual user ID from authentication
-    const assetSymbol = "BTC/USD"; // Could be dynamic based on selected pair
+    const assetSymbol = activeAsset?.symbol.slice(8, 11) + "/USD" || "BTC/USD"; // Could be dynamic based on selected pair
 
     // Socket.io connection and event handlers
     useEffect(() => {
