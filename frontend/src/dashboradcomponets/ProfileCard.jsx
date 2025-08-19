@@ -3,6 +3,7 @@ import { LogOut, User, UserPlus, X, Camera, Calendar, Users, Edit3, Mail, Dollar
 import { useUser } from '../context/useGetUser';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import ReferralDisplay from './ReferralDisplay ';
 
 // Edit Profile Modal Component
 const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) => {
@@ -326,6 +327,7 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
 const ProfileCard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { user, fetchUserProfile } = useUser();
+    const [referralModal, setreferralModal] = useState(false);
     const navigate = useNavigate();
 
     const toastOptions = {
@@ -475,7 +477,9 @@ const ProfileCard = () => {
                             <div>Edit Profile</div>
                         </div>
 
-                        <div className='flex gap-3 items-center text-gray-300 hover:text-white cursor-pointer transition-colors hover:bg-gray-800/50 rounded-lg p-2'>
+                        <div className='flex gap-3 items-center text-gray-300   hover:text-white cursor-pointer transition-colors hover:bg-gray-800/50 rounded-lg p-2'
+                            onClick={() => setreferralModal(!referralModal)}
+                        >
                             <UserPlus size={20} />
                             <div className='flex-1'>Referral Code</div>
                             <div className='bg-gray-800 px-3 py-1 rounded-full text-xs font-mono border border-gray-600'>
@@ -501,6 +505,36 @@ const ProfileCard = () => {
                 currentProfile={user}
                 onUpdate={handleProfileUpdate}
             />
+
+            {/* reffral modal */}
+            {
+                referralModal && (
+                    <>
+
+
+                        <div className="absolute  top-16  z-50">
+                            <div className="fixed inset-0 z-50  flex items-center justify-center pointer-events-none">
+                                <div className="bg-gray-900  rounded-xl border border-gray-700 shadow-2xl max-w-4xl w-full mx-4  overflow-hidden pointer-events-auto">
+                                    <div className="flex items-center  justify-between p-4 border-b border-gray-700">
+                                        <h2 className="text-xl font-bold text-white">My Referrals</h2>
+                                        <button
+                                            onClick={() => setreferralModal(!referralModal)}
+                                            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                        >
+                                            <X size={20} className="text-gray-400" />
+                                        </button>
+                                    </div>
+                                    <div className="overflow-y-auto no-scrollbar max-h-[75vh]">
+                                        <ReferralDisplay />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </>
+                )
+            }
+
         </div>
     );
 };

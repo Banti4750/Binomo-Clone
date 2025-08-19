@@ -85,9 +85,45 @@ const getUserProfile = async (req, res) => {
     }
 }
 
+const getReferralUsers = async (req, res) => {
+    const userId = req.user.id
+
+    try {
+        // Updated query to join with users table and get user names
+        const [referrals] = await db.query(`
+            SELECT
+                r.id,
+                r.referrer_id,
+                r.referred_id,
+                r.referral_code_used,
+                r.bonus_given,
+                r.created_at,
+                u.name as referred_user_name,
+                u.email as referred_user_email
+            FROM referrals r
+            LEFT JOIN users u ON r.referred_id = u.id
+            WHERE r.referrer_id = ?
+            ORDER BY r.created_at DESC
+        `, [userId]);
+
+        res.status(200).json({
+            success: true,
+            referrals,
+            totalBonus: referrals.reduce((sum, ref) => sum + ref.bonus_given, 0),
+            totalReferrals: referrals.length
+        });
+    } catch (error) {
+        console.error('Get referrals error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+}
 // all routes related to user profile
 router.put('/change-username', verifyToken, changeUsername);
 router.put('/update-profile', verifyToken, updateProfile);
 router.get('/profile', verifyToken, getUserProfile);
+router.get('/refferal', verifyToken, getReferralUsers)
 
 export default router;
