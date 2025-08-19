@@ -372,6 +372,7 @@ const TradePage = () => {
                                 </div>
                                 <div className='flex justify-between items-center text-sm mb-2'>
                                     <span className='text-gray-400'>${trade.amount}</span>
+                                    <span className='text-gray-400'>${trade.entryPrice}</span>
                                     <span className='text-white font-mono'>{trade.timeLeft}</span>
                                 </div>
                                 <div className='w-full bg-gray-600 rounded-full h-2'>
