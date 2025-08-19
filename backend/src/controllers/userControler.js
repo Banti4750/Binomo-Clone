@@ -2,6 +2,7 @@ import db from '../config/db.js';
 import { Router } from "express";
 import dotenv from 'dotenv';
 import verifyToken from '../middleware/auth.js';
+import { upload } from '../../utils/multer.js';
 const router = Router();
 dotenv.config();
 
@@ -33,31 +34,41 @@ const changeUsername = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const { profilePicUrl, gender, dob, name } = req.body;
-        const userId = req.user.id; // Assuming user ID is stored in req.user
+        const { gender, dob, name } = req.body;
+        const imageFile = req.file;
+        const userId = req.user.id; // Assuming middleware sets req.user
 
-        let updatedata = [];
+        // Cloudinary gives file.path (secure URL), not file.url
+        const profilePicUrl = imageFile ? imageFile.path : null;
+
+        let updateFields = [];
         let updateValues = [];
+
         if (profilePicUrl) {
-            updatedata.push('profile_pic_url = ?');
+            updateFields.push('profile_pic_url = ?');
             updateValues.push(profilePicUrl);
         }
         if (gender) {
-            updatedata.push('gender = ?');
+            updateFields.push('gender = ?');
             updateValues.push(gender);
         }
         if (dob) {
-            updatedata.push('dob = ?');
-            updateValues.push(dob);
+            const formattedDob = new Date(dob).toISOString().split('T')[0]; // "2025-08-05"
+            updateFields.push('dob = ?');
+            updateValues.push(formattedDob);
         }
         if (name) {
-            updatedata.push('name = ?');
+            updateFields.push('name = ?');
             updateValues.push(name);
         }
 
-        // Update user profile
+        if (updateFields.length === 0) {
+            return res.status(400).json({ message: "No fields provided for update" });
+        }
+
+        // Run update query
         await db.query(
-            `UPDATE users SET ${updatedata.join(', ')} WHERE id = ?`,
+            `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
             [...updateValues, userId]
         );
 
@@ -66,7 +77,8 @@ const updateProfile = async (req, res) => {
         console.error('Update profile error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-}
+};
+
 
 const getUserProfile = async (req, res) => {
     try {
@@ -122,7 +134,7 @@ const getReferralUsers = async (req, res) => {
 }
 // all routes related to user profile
 router.put('/change-username', verifyToken, changeUsername);
-router.put('/update-profile', verifyToken, updateProfile);
+router.put('/update-profile', verifyToken, upload.single("profilePic"), updateProfile);
 router.get('/profile', verifyToken, getUserProfile);
 router.get('/refferal', verifyToken, getReferralUsers)
 

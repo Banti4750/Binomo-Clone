@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, TrendingUp, X } from 'lucide-react'
+import { Plus, TrendingUp, User, X } from 'lucide-react'
 import { useUser } from '../context/useGetUser';
 import AssetsCard from './AssetsCard';
 import { useAssets } from '../context/useGetAssets';
@@ -93,10 +93,20 @@ const Navbar = () => {
                     </button>
 
                     {/* Profile user */}
-                    <div className='bg-gray-800 border border-gray-600 w-10 h-10 rounded-full text-white flex items-center justify-center font-bold cursor-pointer hover:bg-gray-700 transition-colors'
+                    <div className='bg-gray-800 border border-gray-600 rounded-full text-white flex items-center justify-center font-bold cursor-pointer hover:bg-gray-700 transition-colors'
                         onClick={toggleProfileModal}
                     >
-                        {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                        {user?.profile_pic_url ? (
+                            <img
+                                src={user.profile_pic_url}
+                                alt="Profile"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-gray-600"
+                            />
+                        ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                <User size={24} className="text-white" />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -135,24 +145,28 @@ const Navbar = () => {
                     <>
 
 
-                        <div className="absolute  top-16  z-50">
-                            <div className="fixed inset-0 z-50  flex items-center justify-center pointer-events-none">
-                                <div className="bg-gray-900  rounded-xl border border-gray-700 shadow-2xl max-w-4xl w-full mx-4  overflow-hidden pointer-events-auto">
-                                    <div className="flex items-center  justify-between p-4 border-b border-gray-700">
-                                        <h2 className="text-xl font-bold text-white">Trading Dashboard</h2>
-                                        <button
-                                            onClick={toggleAllTradeModal}
-                                            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                                        >
-                                            <X size={20} className="text-gray-400" />
-                                        </button>
-                                    </div>
-                                    <div className="overflow-y-auto no-scrollbar max-h-[75vh]">
-                                        <ShowAllTrades />
-                                    </div>
+                        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                            {/* Modal Box */}
+                            <div className="bg-gray-900 rounded-xl border border-gray-700 shadow-2xl max-w-4xl w-full mx-4 overflow-hidden">
+
+                                {/* Header */}
+                                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                                    <h2 className="text-xl font-bold text-white">Trading Dashboard</h2>
+                                    <button
+                                        onClick={toggleAllTradeModal}
+                                        className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                        <X size={20} className="text-gray-400" />
+                                    </button>
+                                </div>
+
+                                {/* Body (scrollable) */}
+                                <div className="overflow-y-auto no-scrollbar max-h-[75vh] bg-black p-4">
+                                    <ShowAllTrades />
                                 </div>
                             </div>
                         </div>
+
 
                     </>
                 )}

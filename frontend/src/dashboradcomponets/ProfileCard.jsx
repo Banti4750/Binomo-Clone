@@ -15,6 +15,7 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
     });
     const [imagePreview, setImagePreview] = useState('');
     const [loading, setLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
 
     // Initialize and update form when modal opens or currentProfile changes
@@ -29,6 +30,7 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
             };
             setFormData(newFormData);
             setImagePreview(currentProfile.profile_pic_url || '');
+            setSelectedFile(null); // Reset selected file when opening modal
         }
     }, [isOpen, currentProfile]);
 
@@ -68,14 +70,14 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
                 return;
             }
 
+            setSelectedFile(file);
+
             const reader = new FileReader();
             reader.onload = (event) => {
                 const imageUrl = event.target.result;
                 setImagePreview(imageUrl);
-                setFormData(prev => ({
-                    ...prev,
-                    profilePicUrl: imageUrl
-                }));
+                // Don't set profilePicUrl in formData when uploading new file
+                // The backend will handle the new image URL
             };
             reader.onerror = () => {
                 toast.error('Failed to read image file.', {
@@ -92,69 +94,61 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
         e.preventDefault();
         setLoading(true);
 
-        const toastOptions = {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            theme: "dark",
-        };
-
         try {
-            // Get token from localStorage
             const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('No authentication token found');
+            if (!token) throw new Error('No authentication token found');
+
+            const formDataToSend = new FormData();
+
+            // Add text fields to FormData
+            if (formData.name.trim()) formDataToSend.append('name', formData.name.trim());
+            if (formData.gender) formDataToSend.append('gender', formData.gender);
+            if (formData.dob) formDataToSend.append('dob', formData.dob);
+
+            // If new image selected, append the file
+            if (selectedFile) {
+                formDataToSend.append("profilePic", selectedFile);
+            }
+            // If no new file selected but there's an existing profile pic URL, preserve it
+            else if (formData.profilePicUrl && !selectedFile) {
+                formDataToSend.append('profilePicUrl', formData.profilePicUrl);
             }
 
-            // Prepare update data - only include fields that have values
-            const updateData = {};
-            Object.keys(formData).forEach(key => {
-                const value = formData[key];
-                if (value && typeof value === 'string' && value.trim() !== '') {
-                    // Map profilePicUrl to the correct backend field name
-                    if (key === 'profilePicUrl') {
-                        updateData['profile_pic_url'] = value;
-                    } else {
-                        updateData[key] = value;
-                    }
-                }
-            });
-
-            console.log('Sending update data:', updateData);
+            // Debug: Log FormData contents
+            console.log('FormData contents:');
+            for (let pair of formDataToSend.entries()) {
+                console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File: ${pair[1].name}` : pair[1]));
+            }
 
             const response = await fetch('http://localhost:5000/api/user/update-profile', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
+                    // Don't set Content-Type - let browser set it for FormData
                 },
-                body: JSON.stringify(updateData)
+                body: formDataToSend
             });
 
             const responseData = await response.json();
 
             if (response.ok) {
-                console.log('Profile updated successfully:', responseData);
-
-                // Call the onUpdate callback to refresh user data
-                if (onUpdate) {
-                    await onUpdate();
-                }
-
-                // Show success toast
-                toast.success('Profile updated successfully!', toastOptions);
-
-                // Close modal
+                toast.success('Profile updated successfully!', {
+                    position: "top-right",
+                    autoClose: 3000,
+                    theme: "dark",
+                });
                 onClose();
+                if (onUpdate) await onUpdate();
             } else {
                 throw new Error(responseData.message || 'Failed to update profile');
             }
         } catch (error) {
             console.error('Error updating profile:', error);
-            toast.error(error.message || 'Failed to update profile. Please try again.', toastOptions);
+            toast.error(error.message || 'Failed to update profile.', {
+                position: "top-right",
+                autoClose: 3000,
+                theme: "dark",
+            });
         } finally {
             setLoading(false);
         }
@@ -169,13 +163,18 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
             profilePicUrl: ''
         });
         setImagePreview('');
+        setSelectedFile(null); // Reset selected file
+        // Clear file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
         onClose();
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black border border-gray-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-700">
@@ -200,6 +199,10 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
                                         src={imagePreview}
                                         alt="Profile Preview"
                                         className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            console.error('Image failed to load:', imagePreview);
+                                            setImagePreview('');
+                                        }}
                                     />
                                 ) : (
                                     <User className="w-10 h-10 text-white" />
@@ -220,7 +223,14 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
                             accept="image/*"
                             className="hidden"
                         />
-                        <p className="text-sm text-gray-400 text-center">Click camera icon to change profile picture</p>
+                        <p className="text-sm text-gray-400 text-center">
+                            Click camera icon to change profile picture
+                            {selectedFile && (
+                                <span className="block text-blue-400 mt-1">
+                                    New image selected: {selectedFile.name}
+                                </span>
+                            )}
+                        </p>
                     </div>
 
                     {/* Name Field */}
@@ -282,6 +292,7 @@ const EditProfileModal = ({ isOpen, onClose, currentProfile = {}, onUpdate }) =>
                                 id="dob"
                                 type="date"
                                 name="dob"
+
                                 value={formData.dob}
                                 onChange={handleInputChange}
                                 className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
