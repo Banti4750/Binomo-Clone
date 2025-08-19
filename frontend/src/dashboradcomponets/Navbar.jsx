@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, TrendingUp, X } from 'lucide-react'
 import { useUser } from '../context/useGetUser';
 import AssetsCard from './AssetsCard';
 import { useAssets } from '../context/useGetAssets';
 import ProfileCard from './ProfileCard';
+import ShowAllTrades from './ShowAllTrades';
 
 const Navbar = () => {
     const { user, fetchUserProfile } = useUser();
     const [openAssetsModal, setOpenAssetsModal] = useState(false);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const { activeAsset } = useAssets();
-
+    const [openAllModal, setOpenAllModal] = useState(false);
     useEffect(() => {
         fetchUserProfile(); // fetch profile when this component loads
     }, []);
@@ -21,6 +22,10 @@ const Navbar = () => {
 
     const toggleProfileModal = () => {
         setOpenProfileModal(!openProfileModal);
+    };
+
+    const toggleAllTradeModal = () => {
+        setOpenAllModal(!openAllModal);
     };
 
     return (
@@ -56,6 +61,15 @@ const Navbar = () => {
                             <span className='text-green-400 font-medium'>{activeAsset?.payout_percentage || "0"}%</span>
                         </div>
                     </div>
+
+                    <button
+                        className='bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-xl text-yellow-400 border border-gray-600 transition-colors relative z-50 flex items-center gap-2'
+                        onClick={toggleAllTradeModal}
+                    >
+                        <TrendingUp size={16} />
+                        <span className="font-medium">P & L</span>
+                    </button>
+
                 </div>
 
                 {/* Right part */}
@@ -112,6 +126,32 @@ const Navbar = () => {
 
                         <div className="absolute  top-16 right-5 z-50">
                             <ProfileCard />
+                        </div>
+
+                    </>
+                )}
+
+                {openAllModal && (
+                    <>
+
+
+                        <div className="absolute  top-16  z-50">
+                            <div className="fixed inset-0 z-50  flex items-center justify-center pointer-events-none">
+                                <div className="bg-gray-900  rounded-xl border border-gray-700 shadow-2xl max-w-4xl w-full mx-4  overflow-hidden pointer-events-auto">
+                                    <div className="flex items-center  justify-between p-4 border-b border-gray-700">
+                                        <h2 className="text-xl font-bold text-white">Trading Dashboard</h2>
+                                        <button
+                                            onClick={toggleAllTradeModal}
+                                            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                        >
+                                            <X size={20} className="text-gray-400" />
+                                        </button>
+                                    </div>
+                                    <div className="overflow-y-auto no-scrollbar max-h-[75vh]">
+                                        <ShowAllTrades />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </>

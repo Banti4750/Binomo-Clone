@@ -3,6 +3,7 @@ import UserProvider from '../context/useGetUser'
 import AssetsProvider from '../context/useGetAssets'
 import TradingViewChart from '../dashboradcomponets/TradingViewChart'
 import TradePage from '../dashboradcomponets/TradePage'
+import ShowAllTrades from '../dashboradcomponets/ShowAllTrades'
 
 const DashBoard = () => {
     return (
@@ -22,6 +23,7 @@ const DashBoard = () => {
 
                             {/* Trading Actions Panel - 20% width */}
                             <TradePage />
+
                         </div>
                     </div>
                 </UserProvider>

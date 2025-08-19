@@ -6,6 +6,7 @@ import validateUserBalance from '../../utils/tradeHelper/validateUserBalance.js'
 import updateUserBalance from '../../utils/tradeHelper/updateUserBalance.js';
 import axios from 'axios';
 import WebSocket from 'ws';
+import verifyToken from '../middleware/auth.js';
 
 // Binance API configuration
 const BINANCE_API_BASE = 'https://api.binance.com/api/v3';
@@ -62,8 +63,6 @@ dotenv.config();
 // Store for Socket.io instance and WebSocket connections
 let io = null;
 let binanceWS = null;
-const priceStreams = new Map();
-const wsConnections = new Map();
 
 // Real-time price storage
 const REAL_TIME_PRICES = new Map();
@@ -415,8 +414,8 @@ const sendTradeNotification = (userId, tradeData, result) => {
 // Get all trades for a user with enhanced formatting
 const getUserTrades = async (req, res) => {
     try {
-        const { userId } = req.params;
-        const { status = 'OPEN', limit = 50, offset = 0 } = req.query;
+        const userId = req.user.id;
+        const { status = 'OPEN', limit = 10, offset = 0 } = req.query;
 
         let query = `
             SELECT id, user_id, asset_symbol, trade_type, stake_amount,
@@ -530,8 +529,9 @@ const getTradeById = async (req, res) => {
 // Updated createTrade function with Binance integration
 const createTrade = async (req, res) => {
     try {
+        const userId = req.user.id;
+
         const {
-            userId,
             assetSymbol,
             tradeType,
             stakeAmount,
@@ -541,7 +541,7 @@ const createTrade = async (req, res) => {
         console.log('📊 Creating trade:', { userId, assetSymbol, tradeType, stakeAmount, duration });
 
         // Validation
-        if (!userId || !assetSymbol || !tradeType || !stakeAmount || !duration) {
+        if (!assetSymbol || !tradeType || !stakeAmount || !duration) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
@@ -734,7 +734,7 @@ const closeExpiredTrades = async () => {
 // Get trading statistics for a user
 const getUserTradingStats = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.id;
 
         const [stats] = await db.query(`
             SELECT
@@ -772,102 +772,7 @@ const getUserTradingStats = async (req, res) => {
     }
 };
 
-// Get user balance
-const getUserBalance = async (req, res) => {
-    try {
-        const { userId } = req.params;
 
-        const [user] = await db.query('SELECT balance FROM users WHERE id = ?', [userId]);
-
-        if (!user.length) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        res.status(200).json({
-            success: true,
-            balance: user[0].balance
-        });
-    } catch (error) {
-        console.error('Error fetching user balance:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
-// Manual trade settlement endpoint (for testing)
-const settleTrade = async (req, res) => {
-    try {
-        const { tradeId } = req.params;
-
-        // Get trade details
-        const [trades] = await db.query(`
-            SELECT id, user_id, asset_symbol, trade_type, stake_amount,
-                   payout_percentage, entry_price, expiry_time, status
-            FROM trades
-            WHERE id = ? AND status = 'OPEN'
-        `, [tradeId]);
-
-        if (trades.length === 0) {
-            return res.status(404).json({ success: false, message: 'Trade not found or already closed' });
-        }
-
-        const trade = trades[0];
-
-        // Get current price and close trade
-        const closePrice = await getCurrentPrice(trade.asset_symbol);
-        let status = 'LOSS';
-        let profitLoss = -trade.stake_amount;
-        let result = 'LOSS';
-
-        // Determine if trade won or lost
-        const priceDifference = closePrice - trade.entry_price;
-        const priceMovedUp = priceDifference > 0;
-        const priceMovedDown = priceDifference < 0;
-        const minimumMovement = trade.entry_price * 0.0001;
-
-        if (Math.abs(priceDifference) >= minimumMovement) {
-            if ((trade.trade_type === 'CALL' && priceMovedUp) ||
-                (trade.trade_type === 'PUT' && priceMovedDown)) {
-                status = 'WIN';
-                result = 'WIN';
-                const payout = (trade.stake_amount * trade.payout_percentage / 100);
-                profitLoss = payout;
-
-                // Add winnings to user balance
-                await updateUserBalance(trade.user_id, parseInt(trade.stake_amount) + parseInt(profitLoss), 'add');
-            }
-        }
-
-        // Update trade record
-        await db.query(`
-            UPDATE trades
-            SET status = ?, close_price = ?, profit_loss = ?, updated_at = NOW(), is_active = false
-            WHERE id = ?
-        `, [status, closePrice, profitLoss, trade.id]);
-
-        // Send notification
-        sendTradeNotification(trade.user_id, {
-            ...trade,
-            profit_loss: profitLoss,
-            close_price: closePrice
-        }, result);
-
-        res.json({
-            success: true,
-            message: `Trade settled: ${result}`,
-            trade: {
-                id: trade.id,
-                result,
-                entryPrice: trade.entry_price,
-                closePrice,
-                profitLoss
-            }
-        });
-
-    } catch (error) {
-        console.error('Error settling trade:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
 
 // Start trade settlement interval
 let settlementInterval = null;
@@ -919,12 +824,10 @@ const setupSocketNotifications = (socketIO) => {
 };
 
 // ROUTES
-router.get('/trades/user/:userId', getUserTrades); //✅
-router.get('/trades/stats/:userId', getUserTradingStats); //✅
-router.get('/trades/:tradeId', getTradeById);
-router.get('/balance/:userId', getUserBalance); //✅
-router.post('/trades', createTrade); //✅
-router.put('/trades/settle/:tradeId', settleTrade); // Manual settlement for testing
+router.get('/trades/user', verifyToken, getUserTrades); //✅
+router.get('/trades/stats', verifyToken, getUserTradingStats); //✅
+router.get('/trades/:tradeId', verifyToken, getTradeById);
+router.post('/trades', verifyToken, createTrade); //✅
 
 // Export everything needed
 export default router;

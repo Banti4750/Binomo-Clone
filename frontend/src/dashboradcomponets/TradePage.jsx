@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import io from 'socket.io-client'
+import { useUser } from '../context/useGetUser'
 
 const TradePage = () => {
+    const { fetchUserProfile, user } = useUser();
     const [amount, setAmount] = useState('');
     const [selectedTime, setSelectedTime] = useState(1); // Default to 1m
     const [activeTrades, setActiveTrades] = useState([]);
@@ -12,7 +14,7 @@ const TradePage = () => {
     const [notification, setNotification] = useState(null);
 
     // Mock user data - in real app, get from auth context/state
-    const userId = "6"; // Replace with actual user ID from authentication
+    const userId = user?.id; // Replace with actual user ID from authentication
     const assetSymbol = "BTC/USD"; // Could be dynamic based on selected pair
 
     // Socket.io connection and event handlers
@@ -40,7 +42,7 @@ const TradePage = () => {
             setActiveTrades(prev => prev.filter(trade => trade.id !== data.tradeId));
 
             // Refresh user balance after trade completion
-            fetchUserBalance();
+            fetchUserProfile();
         });
 
         // Listen for trade creation confirmations
@@ -67,18 +69,7 @@ const TradePage = () => {
         };
     }, [userId]);
 
-    // Fetch user balance
-    const fetchUserBalance = async () => {
-        try {
-            const response = await fetch(`http://localhost:5000/api/trading/balance/${userId}`);
-            const data = await response.json();
-            if (data.success) {
-                console.log('💰 Balance updated:', data.balance);
-            }
-        } catch (error) {
-            console.error('Error fetching balance:', error);
-        }
-    };
+
 
     // Show notification using react-toastify
     const showNotification = (message, type = 'info') => {
@@ -149,19 +140,18 @@ const TradePage = () => {
             showNotification('Please enter a valid amount', 'error');
             return;
         }
-
+        const token = localStorage.getItem("token");
         setIsLoading(true);
 
         try {
             const response = await fetch('http://localhost:5000/api/trading/trades', { // Updated endpoint
                 method: 'POST',
+
                 headers: {
-                    'Content-Type': 'application/json',
-                    // Add authorization header if needed
-                    // 'Authorization': `Bearer ${userToken}`
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`, // ✅ attach token
                 },
                 body: JSON.stringify({
-                    userId,
                     assetSymbol,
                     tradeType: tradeType.toUpperCase(), // 'CALL' or 'PUT'
                     stakeAmount: parseFloat(amount),
@@ -186,6 +176,7 @@ const TradePage = () => {
                 setActiveTrades(prev => [newTrade, ...prev]);
                 setAmount(''); // Clear amount after successful trade
                 showNotification(`${tradeType} trade placed successfully!`, 'success');
+                fetchUserProfile();
             } else {
                 showNotification(data.message || 'Trade failed', 'error');
             }
@@ -207,7 +198,13 @@ const TradePage = () => {
     useEffect(() => {
         const loadActiveTrades = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/trading/trades/user/${userId}?status=OPEN`);
+                const token = localStorage.getItem("token");
+                const response = await fetch('http://localhost:5000/api/trading/trades/user?status=OPEN', {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`, // ✅ attach token
+                    },
+                });
                 const data = await response.json();
 
                 if (data.success) {
@@ -221,6 +218,7 @@ const TradePage = () => {
 
         // Initial load
         loadActiveTrades();
+
 
         // Backup polling every 30 seconds (fallback if socket fails)
         const pollInterval = setInterval(loadActiveTrades, 30000);
