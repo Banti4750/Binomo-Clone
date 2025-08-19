@@ -18,49 +18,49 @@ const ASSET_MAPPING = {
     'BTC/USD': {
         type: 'crypto',
         binanceSymbol: 'BTCUSDT',
-        id: 'bitcoin',
+        id: 'Bitcoin',
         currency: 'usd',
         stream: 'btcusdt@ticker'
     },
     'ETH/USD': {
         type: 'crypto',
         binanceSymbol: 'ETHUSDT',
-        id: 'ethereum',
+        id: 'Ethereum',
         currency: 'usd',
         stream: 'ethusdt@ticker'
     },
     'ADA/USD': {
         type: 'crypto',
         binanceSymbol: 'ADAUSDT',
-        id: 'cardano',
+        id: 'Cardano',
         currency: 'usd',
         stream: 'adausdt@ticker'
     },
     'BNB/USD': {
         type: 'crypto',
         binanceSymbol: 'BNBUSDT',
-        id: 'binancecoin',
+        id: 'Binancecoin',
         currency: 'usd',
         stream: 'bnbusdt@ticker'
     },
     'XRP/USD': {
         type: 'crypto',
         binanceSymbol: 'XRPUSDT',
-        id: 'ripple',
+        id: 'Ripple',
         currency: 'usd',
         stream: 'xrpusdt@ticker'
     },
     'SOL/USD': {
         type: 'crypto',
         binanceSymbol: 'SOLUSDT',
-        id: 'solana',
+        id: 'Solana',
         currency: 'usd',
         stream: 'solusdt@ticker'
     },
     'DOT/USD': {
         type: 'crypto',
         binanceSymbol: 'DOTUSDT',
-        id: 'polkadot',
+        id: 'Polkadot',
         currency: 'usd',
         stream: 'dotusdt@ticker'
     },
@@ -69,14 +69,14 @@ const ASSET_MAPPING = {
     'LTC/USD': {
         type: 'crypto',
         binanceSymbol: 'LTCUSDT',
-        id: 'litecoin',
+        id: 'Litecoin',
         currency: 'usd',
         stream: 'ltcusdt@ticker'
     },
     'UNI/USD': {
         type: 'crypto',
         binanceSymbol: 'UNIUSDT',
-        id: 'uniswap',
+        id: 'Uniswap',
         currency: 'usd',
         stream: 'uniusdt@ticker'
     },
@@ -84,7 +84,7 @@ const ASSET_MAPPING = {
     'VET/USD': {
         type: 'crypto',
         binanceSymbol: 'VETUSDT',
-        id: 'vechain',
+        id: 'Vechain',
         currency: 'usd',
         stream: 'vetusdt@ticker'
     }
@@ -613,8 +613,23 @@ const createTrade = async (req, res) => {
         // Get enhanced market data
         const currentMarketData = await getMarketData(assetSymbol);
 
-        // const payoutPercentage = await db.query(`SELCT `)
-        const payoutPercentage = calculatePayoutPercentage(duration, assetSymbol, currentMarketData);
+        const assetName = ASSET_MAPPING[assetSymbol]?.id;
+        console.log(assetName)
+        const [rows] = await db.query(
+            `SELECT payout_percentage FROM assets WHERE asset_name = ?`,
+            [assetName]
+        );
+
+        if (rows.length === 0) {
+            throw new Error("Asset not found");
+        }
+
+        const payoutPercentage = rows[0].payout_percentage;
+
+        // console.log(payoutPercentageBYDB)
+
+        // const payoutPercentage = calculatePayoutPercentage(duration, assetSymbol, currentMarketData);
+        console.log(payoutPercentage)
 
         const startTime = new Date();
         const expiryTime = new Date(startTime.getTime() + (duration * 60 * 1000));
