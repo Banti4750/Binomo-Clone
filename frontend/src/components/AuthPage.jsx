@@ -301,23 +301,7 @@ const AuthPage = () => {
         }
     };
 
-    const getTitle = () => {
-        switch (authMode) {
-            case 'otp': return 'Verify Your Email';
-            case 'reset': return 'Reset Your Password';
-            case 'forgot': return 'Forgot Password';
-            default: return authMode === 'login' ? 'Welcome Back' : 'Create Account';
-        }
-    };
 
-    const getSubtitle = () => {
-        switch (authMode) {
-            case 'otp': return `Enter the 6-digit code sent to ${formData.email}`;
-            case 'reset': return 'Create your new password';
-            case 'forgot': return 'Enter your email to receive a reset code';
-            default: return authMode === 'login' ? 'Sign in to start trading' : 'Join millions of traders worldwide';
-        }
-    };
 
     return (
         <>
@@ -338,7 +322,9 @@ const AuthPage = () => {
             />
             {/* Navbar */}
             <div className='flex bg-black w-full fixed top-0 z-50 justify-between items-center p-4'>
-                <div className="flex items-center space-x-2 cursor-pointer">
+                <div className="flex items-center space-x-2 cursor-pointer"
+                    onClick={() => navigate('/')}
+                >
                     <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center transform rotate-12">
                         <span className="text-black font-bold text-lg">⚡</span>
                     </div>
@@ -362,25 +348,6 @@ const AuthPage = () => {
                 <div className="w-full max-w-md relative">
                     {/* Auth Form Card */}
                     <div className="bg-gradient-to-b from-gray-800/95 to-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-700/50 p-8">
-
-                        {/* Header */}
-                        <div className="text-center mb-8">
-                            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-4 shadow-lg">
-                                {authMode === 'otp' ? (
-                                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                    </svg>
-                                ) : (
-                                    <span className="text-white font-bold text-2xl">⚡</span>
-                                )}
-                            </div>
-                            <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-2">
-                                {getTitle()}
-                            </h2>
-                            <p className="text-gray-300 text-lg">{getSubtitle()}</p>
-                        </div>
-
-
 
                         {/* Toggle Tabs - Only show for login/register */}
                         {authMode !== 'forgot' && authMode !== 'otp' && authMode !== 'reset' && (
